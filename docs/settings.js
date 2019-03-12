@@ -60,6 +60,8 @@ function readSettings() {
 		if(!settings.user.icon) {
 			settings.user.icon = location.origin + "/webauthn-tester/user.png";
 		}
+		settings.rp.icon = settings.rp.icon.replace("/push-demo/", "/webauthn-tester/");
+		settings.user.icon = settings.user.icon.replace("/push-demo/", "/webauthn-tester/");
 	} else {
 		settings = {
 			"rp": {
