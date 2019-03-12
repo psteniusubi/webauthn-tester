@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>verify.html</title>
+<link rel="stylesheet" type="text/css" href="credential.css" />
+<style type="text/css">
+</style>
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript" src="base64url.js"></script>
+<script type="text/javascript" src="cbor.js"></script>
+<script type="text/javascript" src="webauthn.js"></script>
+<script type="text/javascript" src="settings.js"></script>
+<script type="text/javascript">
+var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
+
+var settings = readSettings();
+
+function InitializeDisplay() {
+	createCredentialsList($("#credentials"), settings).bind("change", e => allowCredentials = $(e.target).val()).bind("change", UpdateDisplay);
+	$("#verify").bind("click", VerifySignature);
+	$("#remove").bind("click", RemoveCredential);
+	$("#reset").bind("click", Reset);
+	$("#PublicKeyCredential").val("");
+	$("#credentialPublicKey").val("");
+}
+
+function UpdateDisplay() {
+	var id = $("#credentials").val();
+	if(id != "") {
+		getCredential(settings, id)
+			.then(cred => $("#credentialPublicKey").val(JSON.stringify(cred.credentialPublicKey, replacer, 2)));
+	}
+}
+
+function VerifySignature() {
+	var json = JSON.parse($("#PublicKeyCredential").val());
+	var publicKeyCredential = {
+		"response":{
+			"clientDataJSON":Uint8Array.from(atobUrlSafe(json.response.clientDataJSON), t => t.charCodeAt(0)),
+			"authenticatorData":Uint8Array.from(atobUrlSafe(json.response.authenticatorData), t => t.charCodeAt(0)),
+			"signature":Uint8Array.from(atobUrlSafe(json.response.signature), t => t.charCodeAt(0)),
+		},
+	};
+	var publicKey = JSON.parse($("#credentialPublicKey").val());
+	verifyAssertionSignature(publicKeyCredential, publicKey)
+		.catch(e => console.error("verifyAssertionSignature: error "+e))
+		.then(result => console.log("verifyAssertionSignature: returns "+result));
+}
+
+function RemoveCredential() {
+	var id = $("#credentials").val();
+	if(id == "") return;
+	getCredential(settings, id)
+		.then(cred => delete settings.credentials[cred.id])
+		.then(() => saveSettings(settings))
+		.then(() => InitializeDisplay());
+}
+
+function Reset() {
+	localStorage.removeItem("settings");
+	settings = readSettings();
+	InitializeDisplay();
+}
+
+DOMContentLoaded.then(() => InitializeDisplay());
+</script>
+</head>
+<body>
+
+<table>
+<tr><td>credentials</td><td><select id="credentials"></select></td></tr>
+<tr><td>PublicKeyCredential</td></tr>
+<tr><td colspan="2"><textarea id="PublicKeyCredential" rows="12" cols="80"></textarea></td></tr>
+<tr><td>credentialPublicKey</td></tr>
+<tr><td colspan="2"><textarea id="credentialPublicKey" rows="7" cols="80"></textarea></td></tr>
+<tr><td>
+<input id="verify" type="button" value="crypto.subtle.verify()" />
+<input id="remove" type="button" value="remove()" />
+<input id="reset" type="button" value="reset()" />
+</td></tr>
+<tr><td><a href="credential-create.html">credential-create.html</a></td></tr>
+<tr><td><a href="credential-get.html">credential-get.html</a></td></tr>
+</table>
+
+</body>
+</html>

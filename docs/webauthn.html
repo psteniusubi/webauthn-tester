@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>webauthn.html</title>
+<style type="text/css">
+body {
+	font-family: sans-serif;
+}
+</style>
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript" src="cbor.js"></script>
+<script type="text/javascript" src="base64url.js"></script>
+<script type="text/javascript" src="webauthn.js"></script>
+<script type="text/javascript">
+var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
+DOMContentLoaded.then(() => $("#register").click(register));
+DOMContentLoaded.then(() => $("#authenticate").click(authenticate));
+DOMContentLoaded.then(() => $("#rp\\.name").val(location.origin));
+DOMContentLoaded.then(() => $("#rp\\.id").val(location.host));
+DOMContentLoaded.then(() => $("#rpId").val(location.host));
+var isUserVerifyingPlatformAuthenticatorAvailable_promise = PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+Promise.all([isUserVerifyingPlatformAuthenticatorAvailable_promise,DOMContentLoaded])
+	.then(all => $("#isUserVerifyingPlatformAuthenticatorAvailable").val(all[0]));
+
+function getSettings() {
+	var settings;
+	var s = window.localStorage.getItem("settings");
+	if(s) {
+		settings = JSON.parse(s);
+	} else {
+		settings = {
+			"user": {
+				"name":"hello@example.com",
+				"displayName":"Hello Example",
+			},
+			"credentials": [],
+		};
+	}
+	return settings;
+}
+
+var settings = getSettings();
+
+DOMContentLoaded.then(() => $("#user\\.name").val(settings.user.name));
+DOMContentLoaded.then(() => $("#user\\.displayName").val(settings.user.displayName));
+
+function updateSettings(settings) {
+	if(settings) {
+		window.localStorage.setItem("settings", JSON.stringify(settings, replacer, 2));
+	} else {
+		window.localStorage.removeItem("settings");
+	}
+}
+
+function updateAllowCredentials() {
+	var id = $("#allowCredentials").val();
+	$("#allowCredentials").empty();
+	$("#allowCredentials").append("<option>");
+	for(var i in settings.credentials) {
+		var cred = settings.credentials[i];
+		var text = cred.user.name + " (" + cred.instant + ")";
+		var o = $("<option>")
+			.attr({"value":cred.id})
+			.text(text);
+	    if(cred.id == id) {
+			o.attr({"selected":"selected"});
+		}
+		$("#allowCredentials").append(o);
+	}
+}
+
+DOMContentLoaded.then(() => updateAllowCredentials());
+
+var credentialsResponse;
+
+var authenticatorAttestationResponse;
+var authenticatorAssertionResponse;
+
+function register() {
+	var challenge_promise = getRandomChallenge();
+	var name = $("#user\\.name").val();
+	var displayName = $("#user\\.displayName").val();
+	settings.user = {
+		"name":name,
+		"displayName":displayName,
+	};
+	updateSettings(settings);
+	var userid = Uint8Array.from(name, t => t.charCodeAt(0));
+	// https://w3c.github.io/webauthn/#dictdef-publickeycredentialcreationoptions
+	var createParams_promise = challenge_promise.then(challenge => {
+		var authenticatorSelection = {};
+		var authenticatorAttachment = $("#authenticatorSelection\\.authenticatorAttachment").val();
+		if(authenticatorAttachment != "") {
+			authenticatorSelection.authenticatorAttachment = authenticatorAttachment;
+		}
+		var requireResidentKey = $("#authenticatorSelection\\.requireResidentKey").val();
+		if(requireResidentKey != "") {
+			authenticatorSelection.requireResidentKey = (requireResidentKey == "true");
+		}
+		var userVerification = $("#authenticatorSelection\\.userVerification").val();
+		if(userVerification != "") {
+			authenticatorSelection.userVerification = userVerification;
+		}
+		var publicKeyCredentialCreationOptions = {
+			"publicKey": {
+				"rp":{
+					"name": $("#rp\\.name").val(),
+					"id": $("#rp\\.id").val(),
+				},
+				"user":{
+					"id":userid,
+					"name":name,
+					"displayName":displayName,
+				},
+				"challenge":challenge,
+				"pubKeyCredParams":[ 
+					{type: "public-key", alg: -7},
+					{type: "public-key", alg: -257},
+				],
+				"timeout":30000,
+				"authenticatorSelection":authenticatorSelection,
+				"attestation":"none",
+			}
+		};
+		var attestation = $("#attestation").val();
+		if(attestation != "") {
+			publicKeyCredentialCreationOptions.publicKey.attestation = attestation;
+		}
+		return publicKeyCredentialCreationOptions;
+	});
+	createParams_promise.then(createParams => $("#authenticatorAttestationRequest").text(JSON.stringify(createParams, replacer, 2)));
+	var create_promise = createParams_promise.then(createParams => navigator.credentials.create(createParams));
+	Promise.all([challenge_promise, create_promise])
+		.then(all => {
+			var challenge = all[0];
+			var credentialsResponse = all[1];
+			var authenticatorAttestationResponse = credentialsResponse.response;
+			var attestationObject = CBOR.decode(authenticatorAttestationResponse.attestationObject);
+			// https://w3c.github.io/webauthn/#iface-authenticatorattestationresponse
+			return {
+				request: {
+					challenge: challenge,
+				},
+				id: credentialsResponse.id,
+				type: credentialsResponse.type,
+				rawId: credentialsResponse.rawId,
+				response: {
+					rawClientDataJSON: authenticatorAttestationResponse.clientDataJSON,
+					clientDataJSON: JSON.parse(Array.from(new Uint8Array(authenticatorAttestationResponse.clientDataJSON), t => String.fromCharCode(t)).join("")),
+					rawAttestationObject: authenticatorAttestationResponse.attestationObject,
+					attestationObject: attestationObject,
+					authenticatorData: decodeAuthenticatorData(attestationObject.authData),
+				},
+			};
+		})
+		.then(obj => $("#authenticatorAttestationResponse").text(JSON.stringify(obj, replacer, 2)))
+		.catch(e => console.error("credentials.create " + e));
+	create_promise.then(cred => credentialsResponse = cred);
+	create_promise.then(cred => authenticatorAttestationResponse = cred.response);
+	create_promise.then(cred => {
+		settings.credentials.push({
+			"instant":new Date().toISOString(),
+			"user":settings.user,
+			"id":cred.id,
+		});
+		updateSettings(settings);
+		updateAllowCredentials();
+	});
+}
+
+function authenticate() {
+	var challenge_promise = getRandomChallenge();
+	// https://w3c.github.io/webauthn/#dictdef-publickeycredentialrequestoptions
+	var requestParams_promise = challenge_promise.then(challenge => {
+		var publicKeyCredentialRequestOptions = {
+			"publicKey": {
+				"challenge":challenge,
+				"timeout":30000,
+				"rpId":$("#rpId").val(),
+				"allowCredentials":[],
+			}
+		};
+		var allowCredentials = $("#allowCredentials").val();
+		if(allowCredentials != "") {
+			publicKeyCredentialRequestOptions.publicKey.allowCredentials.push({
+				id: Uint8Array.from(atobUrlSafe(allowCredentials), t => t.charCodeAt(0)),
+				type: "public-key",
+			});
+		}
+		var userVerification = $("#userVerification").val();
+		if(userVerification != "") {
+			publicKeyCredentialRequestOptions.publicKey.userVerification = userVerification;
+		}
+		return publicKeyCredentialRequestOptions;
+	});
+	requestParams_promise.then(requestParams => $("#authenticatorAssertionRequest").text(JSON.stringify(requestParams, replacer, 2)));
+	var request_promise = requestParams_promise.then(requestParams => navigator.credentials.get(requestParams));
+	Promise.all([challenge_promise, request_promise])
+		.then(all => {
+			var challenge = all[0];
+			var credentialsResponse = all[1];
+			var authenticatorAssertionResponse = credentialsResponse.response;
+			// https://w3c.github.io/webauthn/#iface-authenticatorassertionresponse
+			return {
+				request: {
+					challenge: challenge,
+				},
+				id: credentialsResponse.id,
+				type: credentialsResponse.type,
+				rawId: credentialsResponse.rawId,
+				response: {
+					rawClientDataJSON: authenticatorAssertionResponse.clientDataJSON,
+					clientDataJSON: JSON.parse(Array.from(new Uint8Array(authenticatorAssertionResponse.clientDataJSON), t => String.fromCharCode(t)).join("")),
+					rawAuthenticatorData: authenticatorAssertionResponse.authenticatorData,
+					authenticatorData: decodeAuthenticatorData(authenticatorAssertionResponse.authenticatorData),
+					signature: authenticatorAssertionResponse.signature,
+					userHandle: authenticatorAssertionResponse.userHandle,
+				},
+			};
+		})
+		.then(obj => $("#authenticatorAssertionResponse").text(JSON.stringify(obj, replacer, 2)))
+		.catch(e => console.error("credentials.get " + e));
+	request_promise.then(cred => credentialsResponse = cred);
+	request_promise.then(cred => authenticatorAssertionResponse = cred.response);
+}
+</script>
+</head>
+<body>
+
+<table>
+
+<tr>
+<td>
+<div>
+<label for="isUserVerifyingPlatformAuthenticatorAvailable">isUserVerifyingPlatformAuthenticatorAvailable</label>
+<input id="isUserVerifyingPlatformAuthenticatorAvailable" type="text" value=""/>
+</div>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/#dom-publickeycredential-isuserverifyingplatformauthenticatoravailable">isUserVerifyingPlatformAuthenticatorAvailable</a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div>
+<label for="rp.name">rp.name</label>
+<input id="rp.name" type="text" value=""/>
+</div>
+<div>
+<label for="rp.id">rp.id</label>
+<input id="rp.id" type="text" value=""/>
+</div>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/#dom-publickeycredentialcreationoptions-rp">rp</a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div>
+<label for="user.name">user.name</label>
+<input id="user.name" type="text" value=""/>
+</div>
+<div>
+<label for="user.displayName">user.displayName</label>
+<input id="user.displayName" type="text" value=""/>
+</div>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/#dom-publickeycredentialcreationoptions-user">user</a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<label for="authenticatorSelection.authenticatorAttachment">authenticatorSelection.authenticatorAttachment</label>
+<select id="authenticatorSelection.authenticatorAttachment">
+<option value=""></option>
+<option value="platform">platform</option>
+<option value="cross-platform">cross-platform</option>
+</select>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/#dom-authenticatorselectioncriteria-authenticatorattachment">authenticatorSelection.authenticatorAttachment</a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<label for="authenticatorSelection.requireResidentKey">authenticatorSelection.requireResidentKey</label>
+<select id="authenticatorSelection.requireResidentKey">
+<option value=""></option>
+<option value="true">true</option>
+<option value="false">false</option>
+</select>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/#dom-authenticatorselectioncriteria-requireresidentkey">authenticatorSelection.requireResidentKey</a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<label for="authenticatorSelection.userVerification">authenticatorSelection.userVerification</label>
+<select id="authenticatorSelection.userVerification">
+<option value=""></option>
+<option value="required">required</option>
+<option value="preferred">preferred</option>
+<option value="discouraged">discouraged</option>
+</select>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/#dom-authenticatorselectioncriteria-userverification">authenticatorSelection.userVerification</a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<label for="attestation">attestation</label>
+<select id="attestation">
+<option value=""></option>
+<option value="none">none</option>
+<option value="indirect">indirect</option>
+<option value="direct">direct</option>
+</select>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/#dom-publickeycredentialcreationoptions-attestation">attestation</a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div><input id="register" value="credentials.create" type="button"/></div>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/#createCredential">Create a New Credential</a></div>
+<div><a href="https://w3c.github.io/webappsec-credential-management/#dom-credentialscontainer-create">navigator.credentials.create()</a></div>
+<div><a href="https://w3c.github.io/webauthn/#op-make-cred">authenticatorMakeCredential</a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div><textarea id="authenticatorAttestationRequest" rows="8" cols="80"></textarea></div>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/#credentialcreationoptions-extension">CredentialCreationOptions</a></div>
+<div><a href="https://w3c.github.io/webauthn/#dictdef-publickeycredentialcreationoptions">PublicKeyCredentialCreationOptions</a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div><textarea id="authenticatorAttestationResponse" rows="8" cols="80"></textarea></div>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/#publickeycredential">PublicKeyCredential</a></div>
+<div><a href="https://w3c.github.io/webauthn/#authenticatorattestationresponse">AuthenticatorAttestationResponse</a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div>
+<label for="rpId">rpId</label>
+<input id="rpId" type="text" value=""/>
+</div>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/#dom-publickeycredentialrequestoptions-rpid">rpId</a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<label for="allowCredentials">allowCredentials</label>
+<select id="allowCredentials">
+<option value=""></option>
+</select>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/#dom-publickeycredentialrequestoptions-allowcredentials">allowCredentials</a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<label for="userVerification">userVerification</label>
+<select id="userVerification">
+<option value=""></option>
+<option value="required">required</option>
+<option value="preferred">preferred</option>
+<option value="discouraged">discouraged</option>
+</select>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/#dom-publickeycredentialrequestoptions-userverification">userVerification</a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div><input id="authenticate" value="credentials.get" type="button"/></div>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/#getAssertion">Use an Existing Credential to Make an Assertion</a></div>
+<div><a href="https://w3c.github.io/webappsec-credential-management/#dom-credentialscontainer-get">navigator.credentials.get()</a></div>
+<div><a href="https://w3c.github.io/webauthn/#op-get-assertion">authenticatorGetAssertion</a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div><textarea id="authenticatorAssertionRequest" rows="8" cols="80"></textarea></div>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/#credentialrequestoptions-extension">CredentialRequestOptions</a></div>
+<div><a href="https://w3c.github.io/webauthn/#dictdef-publickeycredentialrequestoptions">PublicKeyCredentialRequestOptions</a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div><textarea id="authenticatorAssertionResponse" rows="8" cols="80"></textarea></div>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/#publickeycredential">PublicKeyCredential</a></div>
+<div><a href="https://w3c.github.io/webauthn/#authenticatorassertionresponse">AuthenticatorAssertionResponse</a></div>
+</td>
+</tr>
+
+<tr>
+<td>
+<div></div>
+</td>
+<td>
+<div><a href="https://w3c.github.io/webauthn/">https://w3c.github.io/webauthn/</a></div>
+</td>
+</tr>
+
+</table>
+
+
+</body>
+</html>
