@@ -49,7 +49,7 @@ function readSettings() {
 			};
 		}
 		if(!settings.rp.icon) {
-			settings.rp.icon = location.origin + "/push-demo/rp.png";
+			settings.rp.icon = location.origin + "/webauthn-tester/rp.png";
 		}
 		if(!settings.user) {
 			settings.user = {
@@ -58,19 +58,19 @@ function readSettings() {
 			};
 		}
 		if(!settings.user.icon) {
-			settings.user.icon = location.origin + "/push-demo/user.png";
+			settings.user.icon = location.origin + "/webauthn-tester/user.png";
 		}
 	} else {
 		settings = {
 			"rp": {
 				"name":location.origin,
 				"id":location.host,
-				"icon":location.origin + "/push-demo/rp.png",
+				"icon":location.origin + "/webauthn-tester/rp.png",
 			},
 			"user": {
 				"name":"hello@example.com",
 				"displayName":"Hello Example",
-				"icon":location.origin + "/push-demo/user.png",
+				"icon":location.origin + "/webauthn-tester/user.png",
 			},
 			"credentials": {},
 		};
