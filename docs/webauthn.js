@@ -109,7 +109,7 @@ function coseToJwk(data) {
 			if(!data[-2] || !data[-3]) throw "Invalid argument";
 			return {
 				"kty":"EC",
-				//"alg":alg,
+				"alg":alg,
 				"crv":crv,
 				"x":encodeArray(data[-2]),
 				"y":encodeArray(data[-3]),
@@ -123,7 +123,7 @@ function coseToJwk(data) {
 			if(!data[-1] || !data[-2]) throw "Invalid argument";
 			return {
 				"kty":"RSA",
-				//"alg":alg,
+				"alg":alg,
 				"n":encodeArray(data[-1]),
 				"e":encodeArray(data[-2]),
 			};
@@ -196,13 +196,13 @@ function verifyAssertionSignature(publicKeyCredential, publicKey) {
 	
 	key_promise
 		.then(key => console.log("importKey: return " + key))
-		.catch(e => console.error("importKey: error " + JSON.stringify(e)));
+		.catch(e => console.error("importKey: " + JSON.stringify(e)));
 	
 	var hash_promise = sha256(publicKeyCredential.response.clientDataJSON);
 	
 	hash_promise
 		.then(hash => console.log("sha256: return " + hash))
-		.catch(e => console.error("sha256:" + e));
+		.catch(e => console.error("sha256: " + e));
 	
 	var signed_promise = hash_promise.then(hash => {
 		var signed = new Uint8Array(publicKeyCredential.response.authenticatorData.byteLength + hash.byteLength);
@@ -213,20 +213,20 @@ function verifyAssertionSignature(publicKeyCredential, publicKey) {
 	
 	signed_promise
 		.then(signed => console.log("signed: return " + signed))
-		.catch(e => console.error("signed:" + e));
+		.catch(e => console.error("signed: " + e));
 		
 	var signature_promise = convertSignature(publicKey, publicKeyCredential.response.signature);
 
 	signature_promise
 		.then(signature => console.log("signature: return " + signature))
-		.catch(e => console.error("signature:" + e));
+		.catch(e => console.error("signature: " + e));
 	
 	var verify_promise = Promise.all([key_promise,signed_promise,signature_promise])
 		.then(all => crypto.subtle.verify(ALG, all[0], all[2], all[1]));
 
 	verify_promise
 		.then(value => console.log("verify: return " + value))
-		.catch(e => console.error("verify:" + e));
+		.catch(e => console.error("verify: " + e));
 
 	return verify_promise;
 }

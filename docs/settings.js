@@ -25,7 +25,11 @@ function createCredentialsList(select, settings) {
 function addCredential(settings, user, id, publicKey) {
 	settings.credentials[id] = {
 		"instant":new Date().toISOString(),
-		"user":user,
+		"user":{
+			"name":user.name,
+			"id":user.id,
+			"displayName":user.displayName,
+		},
 		"id":id,
 		"credentialPublicKey":credentialPublicKey,
 	};
@@ -42,38 +46,14 @@ function readSettings() {
 	var s = window.localStorage.getItem("settings");
 	if(s) {
 		settings = JSON.parse(s);
-		if(!settings.rp) {
-			settings.rp = {
-				"name":location.origin,
-				"id":location.host,
-			};
+		if(settings.rp) {
+			delete settings.rp;
 		}
-		if(!settings.rp.icon) {
-			settings.rp.icon = location.origin + "/webauthn-tester/rp.png";
+		if(settings.user) {
+			delete settings.user;
 		}
-		if(!settings.user) {
-			settings.user = {
-				"name":"hello@example.com",
-				"displayName":"Hello Example",
-			};
-		}
-		if(!settings.user.icon) {
-			settings.user.icon = location.origin + "/webauthn-tester/user.png";
-		}
-		settings.rp.icon = settings.rp.icon.replace("/push-demo/", "/webauthn-tester/");
-		settings.user.icon = settings.user.icon.replace("/push-demo/", "/webauthn-tester/");
 	} else {
 		settings = {
-			"rp": {
-				"name":location.origin,
-				"id":location.host,
-				"icon":location.origin + "/webauthn-tester/rp.png",
-			},
-			"user": {
-				"name":"hello@example.com",
-				"displayName":"Hello Example",
-				"icon":location.origin + "/webauthn-tester/user.png",
-			},
 			"credentials": {},
 		};
 	}
