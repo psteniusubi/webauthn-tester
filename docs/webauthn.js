@@ -109,7 +109,7 @@ function coseToJwk(data) {
 			if(!data[-2] || !data[-3]) throw "Invalid argument";
 			return {
 				"kty":"EC",
-				"alg":alg,
+				//"alg":alg,
 				"crv":crv,
 				"x":encodeArray(data[-2]),
 				"y":encodeArray(data[-3]),
@@ -123,7 +123,7 @@ function coseToJwk(data) {
 			if(!data[-1] || !data[-2]) throw "Invalid argument";
 			return {
 				"kty":"RSA",
-				"alg":alg,
+				//"alg":alg,
 				"n":encodeArray(data[-1]),
 				"e":encodeArray(data[-2]),
 			};
