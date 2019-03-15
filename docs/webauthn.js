@@ -101,7 +101,9 @@ function decodeAuthenticatorData(data) {
 	if(data.constructor === Uint8Array) {
 		data = data.buffer.slice(data.byteOffset, data.byteLength + data.byteOffset);
 	}
-	if(data.constructor !== ArrayBuffer) throw "Invalid argument: " + data.constructor;
+	if(data.constructor !== ArrayBuffer) {
+		throw "Invalid argument: " + data.constructor;
+	}
 	var view = new DataView(data);
 	var offset = 0;
 	var rpIdHash = view.buffer.slice(offset, offset + 32); offset += 32;
@@ -159,7 +161,7 @@ function coseToJwk(data) {
 			if(!data[-2] || !data[-3]) throw "Invalid argument";
 			return {
 				"kty":"EC",
-				//"alg":alg,
+				"alg":alg,
 				"crv":crv,
 				"x":encodeArray(data[-2]),
 				"y":encodeArray(data[-3]),
@@ -173,12 +175,69 @@ function coseToJwk(data) {
 			if(!data[-1] || !data[-2]) throw "Invalid argument";
 			return {
 				"kty":"RSA",
-				//"alg":alg,
+				"alg":alg,
 				"n":encodeArray(data[-1]),
 				"e":encodeArray(data[-2]),
 			};
 		default: throw "Invalid argument";
 	}
+}
+
+function importJWK(jwk, alg) {
+	var key, algorithm;
+	switch(jwk.kty) {
+		case "EC":
+			key = {
+				"kty": jwk.kty,
+				"crv": jwk.crv,
+				"x": jwk.x,
+				"y": jwk.y
+			};
+			algorithm = {
+				"name":"ECDSA",
+				"namedCurve": jwk.crv,
+			};
+			break;
+		case "RSA":
+			key = {
+				"kty": jwk.kty,
+				"n": jwk.n,
+				"e": jwk.e
+			};
+			algorithm = {
+				"name": "RSASSA-PKCS1-v1_5",
+			};
+			break;
+		default:
+			return Promise.reject("Invalid argument: kty=" + jwk.kty);
+	}
+	var a = alg || jwk.alg;
+	switch(a) {
+		case "RS512":
+		case "ES512":
+		case "S512":
+			algorithm.hash = {
+				name: "SHA-512"
+			};
+			break;
+		case "RS384":
+		case "ES384":
+		case "S384":
+			algorithm.hash = {
+				name: "SHA-384"
+			};
+			break;
+		case "RS256":
+		case "ES256":
+		case "S256":
+			algorithm.hash = {
+				name: "SHA-256"
+			};
+			break;
+		default:
+			return Promise.reject("Invalid argument: alg=" + a);
+	}
+	return crypto.subtle.importKey("jwk", key, algorithm, false, ["verify"]);
 }
 
 /**
@@ -196,7 +255,9 @@ function decodeSignature(publicKey, signature) {
 	if(signature.constructor === Uint8Array) {
 		signature = signature.buffer.slice(signature.byteOffset, signature.byteLength + signature.byteOffset);
 	}
-	if(signature.constructor !== ArrayBuffer) throw "Invalid argument: " + signature.constructor;
+	if(signature.constructor !== ArrayBuffer) {
+		return Promise.reject("Invalid argument: " + signature.constructor);
+	}
 	if(publicKey.kty == "EC") {
 		/*
 			0x30|b1|0x02|b2|r|0x02|b3|s
@@ -207,9 +268,9 @@ function decodeSignature(publicKey, signature) {
 		var rs = new Uint8Array(64);
 		var view = new DataView(signature);
 		var offset = 0;
-		if(view.getUint8(offset++) != 0x30) throw "Invalid argument";
+		if(view.getUint8(offset++) != 0x30) return Promise.reject("Invalid argument");
 		var b1 = view.getUint8(offset++);
-		if(view.getUint8(offset++) != 0x02) throw "Invalid argument";
+		if(view.getUint8(offset++) != 0x02) return Promise.reject("Invalid argument");
 		var b2 = view.getUint8(offset++);
 		if(b2 > 32) {
 			b2--;
@@ -217,7 +278,7 @@ function decodeSignature(publicKey, signature) {
 		}
 		rs.set(new Uint8Array(view.buffer.slice(offset, offset+b2)), 0);
 		offset += b2;
-		if(view.getUint8(offset++) != 0x02) throw "Invalid argument";
+		if(view.getUint8(offset++) != 0x02) return Promise.reject("Invalid argument");
 		var b3 = view.getUint8(offset++);
 		if(b3 > 32) {
 			b3--;
@@ -239,18 +300,8 @@ function sha256(data) {
  * https://w3c.github.io/webauthn/#op-get-assertion
  */
 function verifyAssertionSignature(publicKeyCredential, publicKey) {	
-	var RS256 = {
-		"name": "RSASSA-PKCS1-v1_5",
-		"hash": { "name": "SHA-256" },
-	};
-	var ES256 = {
-		"name":"ECDSA",
-		"namedCurve":"P-256",
-		"hash": { "name": "SHA-256" }
-	};
-	var ALG = (publicKey.kty == "EC") ? ES256 : RS256;
 
-	var key_promise = crypto.subtle.importKey("jwk", publicKey, ALG, false, ["verify"]);
+	var key_promise = importJWK(publicKey, publicKey.alg || "S256");
 	
 	key_promise
 		.then(key => console.log("importKey: return " + key))
@@ -280,7 +331,7 @@ function verifyAssertionSignature(publicKeyCredential, publicKey) {
 		.catch(e => console.error("signature: " + e));
 	
 	var verify_promise = Promise.all([key_promise,signed_promise,signature_promise])
-		.then(all => crypto.subtle.verify(ALG, all[0], all[2], all[1]));
+		.then(all => crypto.subtle.verify(all[0].algorithm, all[0], all[2], all[1]));
 
 	verify_promise
 		.then(value => console.log("verify: return " + value))
