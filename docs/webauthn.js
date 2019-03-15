@@ -1,3 +1,9 @@
+/**
+ * depends on
+ * base64url.js
+ * cbor.js (from https://github.com/paroga/cbor-js)
+ */
+
 function toBoolean(value) { 
 	if("true" == value) return true;
 	if("false" == value) return false;
@@ -8,10 +14,8 @@ function encodeArray(array) {
 	return btoaUrlSafe(Array.from(new Uint8Array(array), t => String.fromCharCode(t)).join(""));
 }
 
-function getRandomChallenge() {
-	var array = new Uint8Array(32);
-	crypto.getRandomValues(array);
-	return Promise.resolve(array);
+function decodeArray(value) {
+	return Uint8Array.from(atobUrlSafe(value), t => t.charCodeAt(0));
 }
 
 function replacer(k,v) {
@@ -52,8 +56,46 @@ function replacer(k,v) {
 	return v;
 }
 
+function encodeJson(value) {
+	return JSON.stringify(value, replacer, 2);
+}
+
+/**
+ * https://w3c.github.io/webauthn/#dom-publickeycredentialcreationoptions-challenge
+ * https://w3c.github.io/webauthn/#dom-publickeycredentialrequestoptions-challenge
+ */
+function getRandomChallenge() {
+	var array = new Uint8Array(32);
+	crypto.getRandomValues(array);
+	return Promise.resolve(array);
+}
+
+/**
+ * https://w3c.github.io/webauthn/#dom-authenticatorresponse-clientdatajson
+ */
+function decodeClientDataJSON(data) {
+	return JSON.parse(Array.from(new Uint8Array(data), t => String.fromCharCode(t)).join(""))
+}
+
+/**
+ * https://w3c.github.io/webauthn/#dom-authenticatorattestationresponse-attestationobject
+ */
+function decodeAttestationObject(data) {
+	return CBOR.decode(data);
+}
+
 /**
  * https://w3c.github.io/webauthn/#sec-authenticator-data
+ *
+ * rpIdHash 32
+ * flags 1
+ *  bit 0 up
+ *  bit 2 uv
+ *  bit 6 at
+ *  bit 7 ed
+ * signCount 4
+ * attestedCredentialData variable
+ * extensions variable
  */
 function decodeAuthenticatorData(data) {
 	if(data.constructor === Uint8Array) {
@@ -78,6 +120,14 @@ function decodeAuthenticatorData(data) {
 	};
 	// attestedCredentialData 
 	if(authenticatorData.flags.at) {
+		/**
+		 * https://w3c.github.io/webauthn/#sec-attested-credential-data
+		 *
+		 * aaguid  16
+		 * credentialIdLength 2
+		 * credentialId  L
+		 * credentialPublicKey variable
+		 */
 		var aaguid = view.buffer.slice(offset, offset + 16); offset += 16;
 		var credentialIdLength = view.getUint16(offset, false); offset += 2;
 		var credentialId = view.buffer.slice(offset, offset + credentialIdLength); offset += credentialIdLength;
@@ -131,14 +181,18 @@ function coseToJwk(data) {
 	}
 }
 
-function sha256(data) {
-	return crypto.subtle.digest("SHA-256", data);
+/**
+ * https://w3c.github.io/webauthn/#credentialpublickey
+ */
+function decodeCredentialPublicKey(data) {
+	var obj = CBOR.decode(data);
+	return coseToJwk(obj);
 }
 
 /**
  * https://w3c.github.io/webauthn/#signature-attestation-types
  */
-function convertSignature(publicKey, signature) {
+function decodeSignature(publicKey, signature) {
 	if(signature.constructor === Uint8Array) {
 		signature = signature.buffer.slice(signature.byteOffset, signature.byteLength + signature.byteOffset);
 	}
@@ -174,6 +228,10 @@ function convertSignature(publicKey, signature) {
 	} else {
 		return Promise.resolve(signature);
 	}
+}
+
+function sha256(data) {
+	return crypto.subtle.digest("SHA-256", data);
 }
 
 /**
@@ -215,7 +273,7 @@ function verifyAssertionSignature(publicKeyCredential, publicKey) {
 		.then(signed => console.log("signed: return " + signed))
 		.catch(e => console.error("signed: " + e));
 		
-	var signature_promise = convertSignature(publicKey, publicKeyCredential.response.signature);
+	var signature_promise = decodeSignature(publicKey, publicKeyCredential.response.signature);
 
 	signature_promise
 		.then(signature => console.log("signature: return " + signature))

@@ -28,7 +28,7 @@ function UpdateDisplay() {
 	var id = $("#credentials").val();
 	if(id != "") {
 		getCredential(settings, id)
-			.then(cred => $("#credentialPublicKey").val(JSON.stringify(cred.credentialPublicKey, replacer, 2)));
+			.then(cred => $("#credentialPublicKey").val(encodeJson(cred.credentialPublicKey)));
 	}
 }
 
@@ -36,9 +36,9 @@ function VerifySignature() {
 	var json = JSON.parse($("#PublicKeyCredential").val());
 	var publicKeyCredential = {
 		"response":{
-			"clientDataJSON":Uint8Array.from(atobUrlSafe(json.response.clientDataJSON), t => t.charCodeAt(0)),
-			"authenticatorData":Uint8Array.from(atobUrlSafe(json.response.authenticatorData), t => t.charCodeAt(0)),
-			"signature":Uint8Array.from(atobUrlSafe(json.response.signature), t => t.charCodeAt(0)),
+			"clientDataJSON":decodeArray(json.response.clientDataJSON),
+			"authenticatorData":decodeArray(json.response.authenticatorData),
+			"signature":decodeArray(json.response.signature),
 		},
 	};
 	var publicKey = JSON.parse($("#credentialPublicKey").val());
