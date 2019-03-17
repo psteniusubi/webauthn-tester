@@ -28,7 +28,7 @@ function UpdateDisplay() {
 	var id = $("#credentials").val();
 	if(id != "") {
 		getCredential(settings, id)
-			.then(cred => $("#credentialPublicKey").val(encodeJson(cred.credentialPublicKey)));
+			.then(value => $("#credentialPublicKey").val(encodeJson(value.credentialPublicKey)));
 	}
 }
 
@@ -44,14 +44,14 @@ function VerifySignature() {
 	var publicKey = JSON.parse($("#credentialPublicKey").val());
 	verifyAssertionSignature(publicKeyCredential, publicKey)
 		.catch(e => console.error("verifyAssertionSignature: error "+e))
-		.then(result => console.log("verifyAssertionSignature: returns "+result));
+		.then(value => console.log("verifyAssertionSignature: returns "+value));
 }
 
 function RemoveCredential() {
 	var id = $("#credentials").val();
 	if(id == "") return;
 	getCredential(settings, id)
-		.then(cred => delete settings.credentials[cred.id])
+		.then(value => delete settings.credentials[value.id])
 		.then(() => saveSettings(settings))
 		.then(() => InitializeDisplay());
 }
