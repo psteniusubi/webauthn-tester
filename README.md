@@ -21,3 +21,15 @@ the tool will render this as
 ```
 "challenge": "SABWyoy28rCoCVR3DTDuLyUQb2nXg_wPiZ5c6O2DV0U"
 ```
+
+# Register (Create Credential)
+
+https://psteniusubi.github.io/webauthn-tester/credential-create.html
+
+# Authenticate (Get Credential)
+
+https://psteniusubi.github.io/webauthn-tester/credential-get.html
+
+# Edit Credentials
+
+https://psteniusubi.github.io/webauthn-tester/credential-edit.html

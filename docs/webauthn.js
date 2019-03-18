@@ -18,6 +18,9 @@ function decodeArray(value) {
 	return Uint8Array.from(atobUrlSafe(value), t => t.charCodeAt(0));
 }
 
+/**
+ * replacer method for JSON.stringify
+ */
 function replacer(k,v) {
 	if(v && v.constructor === Uint8Array) {
 		return encodeArray(v);
@@ -26,7 +29,7 @@ function replacer(k,v) {
 		return encodeArray(v);
 	}
 	if(v && v.constructor === PublicKeyCredential) {
-		return {
+		var publicKeyCredential = {
 			// https://w3c.github.io/webappsec-credential-management/#credential
 			id: v.id,
 			type: v.type,
@@ -34,6 +37,11 @@ function replacer(k,v) {
 			rawId: v.rawId,
 			response: v.response,
 		};
+		var extensions = v.getClientExtensionResults();
+		if(extensions) {
+			publicKeyCredential.extensions = extensions;
+		}
+		return publicKeyCredential;
 	}
 	if(v && v.constructor === AuthenticatorAttestationResponse) {
 		return {
@@ -53,9 +61,21 @@ function replacer(k,v) {
 			userHandle: v.userHandle, 
 		};
 	}
+	if(v && v.constructor === CryptoKey) {
+		return {
+			// https://w3c.github.io/webcrypto/#cryptokey-interface
+			type: v.type,
+			extractable: v.extractable,
+			algorithm: v.algorithm,
+			usages: v.usages,
+		};
+	}
 	return v;
 }
 
+/**
+ * invokes JSON.stringify with default parameters
+ */
 function encodeJson(value) {
 	return JSON.stringify(value, replacer, 2);
 }
@@ -86,16 +106,6 @@ function decodeAttestationObject(data) {
 
 /**
  * https://w3c.github.io/webauthn/#sec-authenticator-data
- *
- * rpIdHash 32
- * flags 1
- *  bit 0 up
- *  bit 2 uv
- *  bit 6 at
- *  bit 7 ed
- * signCount 4
- * attestedCredentialData variable
- * extensions variable
  */
 function decodeAuthenticatorData(data) {
 	if(data.constructor === Uint8Array) {
@@ -104,6 +114,19 @@ function decodeAuthenticatorData(data) {
 	if(data.constructor !== ArrayBuffer) {
 		throw "Invalid argument: " + data.constructor;
 	}
+	/**
+	 * https://w3c.github.io/webauthn/#sec-authenticator-data
+	 *
+	 * rpIdHash 32
+	 * flags 1
+	 *  bit 0 up
+	 *  bit 2 uv
+	 *  bit 6 at
+	 *  bit 7 ed
+	 * signCount 4
+	 * attestedCredentialData variable
+	 * extensions variable
+	 */
 	var view = new DataView(data);
 	var offset = 0;
 	var rpIdHash = view.buffer.slice(offset, offset + 32); offset += 32;
@@ -183,27 +206,20 @@ function coseToJwk(data) {
 	}
 }
 
-function importJWK(jwk, alg) {
-	var key, algorithm;
+/**
+ * https://www.w3.org/TR/WebCryptoAPI/#algorithm-overview
+ * https://www.w3.org/TR/WebCryptoAPI/#jwk-mapping
+ */
+function getAlgorithm(jwk, alg) {
+	var algorithm;
 	switch(jwk.kty) {
 		case "EC":
-			key = {
-				"kty": jwk.kty,
-				"crv": jwk.crv,
-				"x": jwk.x,
-				"y": jwk.y
-			};
 			algorithm = {
 				"name":"ECDSA",
 				"namedCurve": jwk.crv,
 			};
 			break;
 		case "RSA":
-			key = {
-				"kty": jwk.kty,
-				"n": jwk.n,
-				"e": jwk.e
-			};
 			algorithm = {
 				"name": "RSASSA-PKCS1-v1_5",
 			};
@@ -211,7 +227,7 @@ function importJWK(jwk, alg) {
 		default:
 			return Promise.reject("Invalid argument: kty=" + jwk.kty);
 	}
-	var a = alg || jwk.alg;
+	var a = alg || jwk.alg || "S256";
 	switch(a) {
 		case "RS512":
 		case "ES512":
@@ -237,6 +253,33 @@ function importJWK(jwk, alg) {
 		default:
 			return Promise.reject("Invalid argument: alg=" + a);
 	}
+	return algorithm;
+}
+
+function importJWK(jwk, alg) {
+	var key;
+	switch(jwk.kty) {
+		case "EC":
+			key = {
+				"kty": jwk.kty,
+				"crv": jwk.crv,
+				"x": jwk.x,
+				"y": jwk.y
+			};
+			break;
+		case "RSA":
+			key = {
+				"kty": jwk.kty,
+				"n": jwk.n,
+				"e": jwk.e
+			};
+			break;
+		default:
+			return Promise.reject("Invalid argument: kty=" + jwk.kty);
+	}
+	var algorithm = getAlgorithm(jwk, alg);
+	//console.log("importKey key: "+ encodeJson(key));
+	//console.log("importKey algorithm: "+ encodeJson(algorithm));
 	return crypto.subtle.importKey("jwk", key, algorithm, false, ["verify"]);
 }
 
@@ -300,38 +343,40 @@ function sha256(data) {
  * https://w3c.github.io/webauthn/#op-get-assertion
  */
 function verifyAssertionSignature(publicKeyCredential, publicKey) {	
+	
+	var alg = publicKey.alg || "S256";
 
-	var key_promise = importJWK(publicKey, publicKey.alg || "S256");
+	var key_promise = importJWK(publicKey, alg);
 	
 	key_promise
-		.then(key => console.log("importKey: return " + key))
+		.then(value => console.log("importKey: return " + encodeJson(value)))
 		.catch(e => console.error("importKey: " + JSON.stringify(e)));
 	
 	var hash_promise = sha256(publicKeyCredential.response.clientDataJSON);
 	
 	hash_promise
-		.then(hash => console.log("sha256: return " + hash))
+		.then(value => console.log("sha256: return " + replacer(null, value)))
 		.catch(e => console.error("sha256: " + e));
 	
-	var signed_promise = hash_promise.then(hash => {
-		var signed = new Uint8Array(publicKeyCredential.response.authenticatorData.byteLength + hash.byteLength);
+	var signed_promise = hash_promise.then(value => {
+		var signed = new Uint8Array(publicKeyCredential.response.authenticatorData.byteLength + value.byteLength);
 		signed.set(new Uint8Array(publicKeyCredential.response.authenticatorData), 0);
-		signed.set(new Uint8Array(hash), publicKeyCredential.response.authenticatorData.byteLength);
+		signed.set(new Uint8Array(value), publicKeyCredential.response.authenticatorData.byteLength);
 		return signed;
 	});
 	
 	signed_promise
-		.then(signed => console.log("signed: return " + signed))
+		.then(value => console.log("signed: return " + replacer(null, value)))
 		.catch(e => console.error("signed: " + e));
 		
 	var signature_promise = decodeSignature(publicKey, publicKeyCredential.response.signature);
 
 	signature_promise
-		.then(signature => console.log("signature: return " + signature))
+		.then(value => console.log("signature: return " + replacer(null, value)))
 		.catch(e => console.error("signature: " + e));
 	
 	var verify_promise = Promise.all([key_promise,signed_promise,signature_promise])
-		.then(all => crypto.subtle.verify(all[0].algorithm, all[0], all[2], all[1]));
+		.then(all => crypto.subtle.verify(getAlgorithm(publicKey, alg), all[0], all[2], all[1]));
 
 	verify_promise
 		.then(value => console.log("verify: return " + value))
