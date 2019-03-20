@@ -29,7 +29,7 @@ function replacer(k,v) {
 		return encodeArray(v);
 	}
 	if(v && v.constructor === PublicKeyCredential) {
-		var publicKeyCredential = {
+		return {
 			// https://w3c.github.io/webappsec-credential-management/#credential
 			id: v.id,
 			type: v.type,
@@ -37,11 +37,6 @@ function replacer(k,v) {
 			rawId: v.rawId,
 			response: v.response,
 		};
-		var extensions = v.getClientExtensionResults();
-		if(extensions) {
-			publicKeyCredential.extensions = extensions;
-		}
-		return publicKeyCredential;
 	}
 	if(v && v.constructor === AuthenticatorAttestationResponse) {
 		return {

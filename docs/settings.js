@@ -11,6 +11,11 @@ function addOptions(select, options) {
 function createCredentialsList(select, settings) {
 	select.empty();
 	select.append("<option>");
+	select.append(
+		$("<option>")
+			.attr({"value":"*"})
+			.text("All")
+	);
 	for(var i in settings.credentials) {
 		var cred = settings.credentials[i];
 		var text = cred.instant + " - " + cred.user.name + " (" + cred.user.displayName + ")";
