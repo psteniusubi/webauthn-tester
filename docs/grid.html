@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style type="text/css">
+body > div {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(40ch, 1fr));
+}
+body > div:hover {
+	background-color: lightgray;
+}
+div > div {
+	display: flex;
+	padding: 0.1em;
+}
+div > input[type='text'], div > select, div > textarea {
+	flex: auto;
+	width: 100%;
+}
+div > div.wide {
+	grid-row: 2;
+}
+</style>
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript">
+var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
+var properties = [
+	{
+		"id":"isUserVerifyingPlatformAuthenticatorAvailable",
+		"href":"https://w3c.github.io/webauthn/#isUserVerifyingPlatformAuthenticatorAvailable",
+		"input":{"readonly":true},
+	},
+	{
+		"id":"PublicKeyCredentialCreationOptions",
+		"href":"https://w3c.github.io/webauthn/#dictdef-publickeycredentialcreationoptions",
+	},
+	// publicKey.rp
+	{
+		"id":"publicKey.rp.name",
+		"href":"https://w3c.github.io/webauthn/",
+		"select":[location.origin, "webauthn-tester"],
+		"bind": obj => obj.on("change", e => console.log("bind: change")),
+	},
+	{
+		"id":"publicKey.rp.id",
+		"href":"https://w3c.github.io/webauthn/",
+		"select":["", location.host],
+		"bind": obj => obj.on("change", e => console.log("bind: change")),
+	},
+	{
+		"id":"publicKey.rp.icon",
+		"href":"https://w3c.github.io/webauthn/",
+		"select":["", location.origin + "/webauthn-tester/rp.png"],
+		"bind": obj => obj.on("change", e => console.log("bind: change")),
+	},
+	// publicKey.user
+	{
+		"id":"publicKey.user.name",
+		"href":"https://w3c.github.io/webauthn/",
+		"input":{},
+		"bind": obj => obj.val("hello@example.com").on("input", e => console.log("bind: input")),
+	},
+	{
+		"id":"publicKey.user.displayName",
+		"href":"https://w3c.github.io/webauthn/",
+		"input":{},
+		"bind": obj => obj.val("Hello Example").on("input", e => console.log("bind: input")),
+	},
+	{
+		"id":"publicKey.user.icon",
+		"href":"https://w3c.github.io/webauthn/",
+		"select":["", location.origin + "/webauthn-tester/user.png"],
+		"bind": obj => obj.on("change", e => console.log("bind: change")),
+	},
+	//
+	{
+		"id":"PublicKeyCredentialCreationOptions",
+		"href":"https://w3c.github.io/webauthn/#dictdef-publickeycredentialcreationoptions",
+		"textarea":{"readonly":true},
+	},
+];
+function FormChange() {
+	console.log("FormChange");
+}
+DOMContentLoaded.then(() => {
+	for(var i in properties) {
+		var div = $("<div>");
+		var left = $("<div>");
+		var property = properties[i];
+		if(property.href) {
+			var a = $("<a>")
+				.attr("target", "_blank")
+				.attr("href", property.href)
+				.text(property.id);
+			left.append(a);
+		} else {
+			left.text(property.id);
+		}
+		div.append(left);
+		if(property.input) {
+			var right = $("<div>");
+			var input = $("<input>")
+				.attr("type", "text")
+				.attr("id", property.id);
+			if(property.bind) {
+				property.bind(input);
+			}
+			if(property.input.readonly) {
+				input.attr("readonly", "readonly");
+			} else {
+				input.on("input", FormChange);
+			}
+			right.append(input);
+			div.append(right);
+		} else if(property.select) {
+			var right = $("<div>");
+			var select = $("<select>")
+				.attr("id", property.id);
+			Object.values(property.select).forEach(v => {
+				var option = $("<option>").text(v);
+				select.append(option);
+			});
+			if(property.bind) {
+				property.bind(select);
+			}
+			select.on("change", FormChange);
+			right.append(select);
+			div.append(right);
+		} else if(property.textarea) {
+			var right = $("<div>")
+				.attr("class", "wide");
+			var textarea = $("<textarea>")
+				.attr("rows", 2)
+				.attr("id", property.id);
+			if(property.bind) {
+				property.bind(textarea);
+			}
+			if(property.textarea.readonly) {
+				textarea.attr("readonly", "readonly");
+			} else {
+				textarea.on("input", FormChange);
+			}
+			right.append(textarea);
+			div.append(right);
+		} 
+		$("body").append(div);
+	}
+});
+</script>
+</head>
+<body>
+
+</body>
+</html>

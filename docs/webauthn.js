@@ -75,6 +75,24 @@ function encodeJson(value) {
 	return JSON.stringify(value, replacer, 2);
 }
 
+function PublicKeyCredential_isUserVerifyingPlatformAuthenticatorAvailable() {
+	return new Promise((resolve, reject) => PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+		.then(value => resolve(value))
+		.catch(error => reject(error)));
+}
+
+function navigator_credentials_create(options) {
+	return new Promise((resolve, reject) => navigator.credentials.create(options)
+		.then(value => resolve(value))
+		.catch(error => reject(error)));
+}
+
+function navigator_credentials_get(options) {
+	return new Promise((resolve, reject) => navigator.credentials.get(options)
+		.then(value => resolve(value))
+		.catch(error => reject(error)));
+}
+
 /**
  * https://w3c.github.io/webauthn/#dom-publickeycredentialcreationoptions-challenge
  * https://w3c.github.io/webauthn/#dom-publickeycredentialrequestoptions-challenge
