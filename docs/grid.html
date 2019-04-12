@@ -3,6 +3,9 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <style type="text/css">
+body {
+	font-family: sans-serif;
+}
 body > div {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(40ch, 1fr));
@@ -20,6 +23,13 @@ div > input[type='text'], div > select, div > textarea {
 }
 div > div.wide {
 	grid-row: 2;
+}
+div > a {
+  text-decoration: none;
+  color: unset;
+}
+div > a:hover, div > a:active {
+  text-decoration: underline;	
 }
 </style>
 <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
