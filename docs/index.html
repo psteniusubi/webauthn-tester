@@ -3,17 +3,34 @@
 <head>
 <title>webauthn-tester</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/png" href="/favicon.png" />
 <style type="text/css">
 body {
 	font-family: sans-serif;
 }
 </style>
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript">
+var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
+DOMContentLoaded.then(() => {
+	if(location.host !== "psteniusubi.github.io") {
+		if(location.host !== "psteniusubi.example.com") {
+			// <li><a href="https://psteniusubi.example.com/webauthn-tester/">psteniusubi.example.com</a></li>
+			$("#menu").prepend(
+				$("<li>").append($("<a>").attr("href", "https://psteniusubi.example.com/webauthn-tester/").text("psteniusubi.example.com"))
+			);
+		}
+		// <li><a href="https://psteniusubi.github.io/webauthn-tester/">psteniusubi.github.io</a></li>
+		$("#menu").prepend(
+			$("<li>").append($("<a>").attr("href", "https://psteniusubi.github.io/webauthn-tester/").text("psteniusubi.github.io"))
+		);
+	}
+});
+</script>
 </head>
 <body>
 <h1>webauthn-tester</h1>
-<ul>
-<li><a href="https://psteniusubi.example.com/webauthn-tester/">psteniusubi.example.com</a></li>
-<li><a href="https://psteniusubi.github.io/webauthn-tester/">psteniusubi.github.io</a></li>
+<ul id="menu">
 <li><a href="credential-create.html">credential-create.html</a></li>
 <li><a href="credential-get.html">credential-get.html</a></li>
 <li><a href="credential-edit.html">credential-edit.html</a></li>

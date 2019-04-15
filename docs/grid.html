@@ -10,9 +10,6 @@ body > div {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(40ch, 1fr));
 }
-body > div:hover {
-	background-color: lightgray;
-}
 div > div {
 	display: flex;
 	padding: 0.1em;
@@ -20,16 +17,29 @@ div > div {
 div > input[type='text'], div > select, div > textarea {
 	flex: auto;
 	width: 100%;
+	border: 1px solid gray;
+	background-color: white;
+	padding: 0.1em;
 }
 div > div.wide {
 	grid-row: 2;
 }
-div > a {
-  text-decoration: none;
-  color: unset;
+span.w3c {
+	color: gray;
+	font-size: small;
 }
-div > a:hover, div > a:active {
-  text-decoration: underline;	
+a {
+	text-decoration: none;
+	color: unset;
+}
+a:hover, a:active {
+	text-decoration: underline;
+}
+span {
+	margin-left: 0.2em;
+}
+.input input:hover, .input select:hover, .input textarea:hover {
+	border-color: black;
 }
 </style>
 <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
@@ -96,18 +106,32 @@ function FormChange() {
 DOMContentLoaded.then(() => {
 	for(var i in properties) {
 		var div = $("<div>");
-		var left = $("<div>");
 		var property = properties[i];
+		
+		var left = $("<div>");
+		
+		var label = $("<label>")
+			.text(property.id);
+		if(property.input || property.select || property.textarea) {
+			label.attr("for", property.id);
+		}
+		left.append(label);	
+
 		if(property.href) {
 			var a = $("<a>")
-				.attr("target", "_blank")
+				.attr("target", "_blank")				
 				.attr("href", property.href)
-				.text(property.id);
-			left.append(a);
-		} else {
-			left.text(property.id);
-		}
+				.text("w3c");
+			var span = $("<span>")
+				.attr("class", "w3c")
+				.append("[")
+				.append(a)
+				.append("]");
+			left.append(span);
+		} 
+
 		div.append(left);
+		
 		if(property.input) {
 			var right = $("<div>");
 			var input = $("<input>")
@@ -120,6 +144,7 @@ DOMContentLoaded.then(() => {
 				input.attr("readonly", "readonly");
 			} else {
 				input.on("input", FormChange);
+				div.attr("class", "input");
 			}
 			right.append(input);
 			div.append(right);
@@ -136,6 +161,7 @@ DOMContentLoaded.then(() => {
 			}
 			select.on("change", FormChange);
 			right.append(select);
+			div.attr("class", "input");
 			div.append(right);
 		} else if(property.textarea) {
 			var right = $("<div>")
@@ -150,6 +176,7 @@ DOMContentLoaded.then(() => {
 				textarea.attr("readonly", "readonly");
 			} else {
 				textarea.on("input", FormChange);
+				div.attr("class", "input");
 			}
 			right.append(textarea);
 			div.append(right);
