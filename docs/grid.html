@@ -2,54 +2,63 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/png" href="/favicon.png" />
+<link rel="stylesheet" type="text/css" href="grid.css" />
 <style type="text/css">
-body {
-	font-family: sans-serif;
+textarea {
+	height: auto;
+	white-space: pre;
+	word-wrap: normal;
+	word-break: normal;
+	overflow:hidden;
 }
-body > div {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(40ch, 1fr));
-}
-div > div {
-	display: flex;
-	padding: 0.1em;
-}
-div > input[type='text'], div > select, div > textarea {
-	flex: auto;
-	width: 100%;
-	border: 1px solid gray;
-	background-color: white;
-	padding: 0.1em;
-}
-div > div.wide {
-	grid-row: 2;
-}
-span.w3c {
-	color: gray;
-	font-size: small;
-}
-a {
-	text-decoration: none;
-	color: unset;
-}
-a:hover, a:active {
-	text-decoration: underline;
-}
-span {
-	margin-left: 0.2em;
-}
-.input input:hover, .input select:hover, .input textarea:hover {
-	border-color: black;
+.error {
+	color:red;
 }
 </style>
 <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript" src="grid.js"></script>
+<script type="text/javascript" src="settings.js"></script>
+<script type="text/javascript" src="base64url.js"></script>
+<script type="text/javascript" src="cbor.js"></script>
+<script type="text/javascript" src="webauthn.js"></script>
 <script type="text/javascript">
 var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
+
+var settings = readSettings();
+var rp = {};
+var user = {
+	"name":"hello@example.com",
+	"displayName":"Hello Example",
+};
+var excludeCredentials = "";
+var authenticatorSelection = {};
+var timeout = "";
+var attestation = "";
+
+var publicKeyCredentialCreationOptions_promise;
+var publicKeyCredentialCreationOptions;
+var publicKeyCredential_promise;
+var publicKeyCredential;
+var clientDataJSON_promise;
+var clientDataJSON;
+var attestationObject_promise;
+var attestationObject;
+var authData_promise;
+var authData;
+var credentialPublicKey_promise;
+var credentialPublicKey;
+
 var properties = [
 	{
+		"id":"navi",
+		"title":"[<a href='create.html'>create.html</a>] [<a href='get.html'>get.html</a>] [<a href='edit.html'>edit.html</a>]",
+	},
+	{
 		"id":"isUserVerifyingPlatformAuthenticatorAvailable",
+		"title":"isUserVerifyingPlatformAuthenticatorAvailable()",
 		"href":"https://w3c.github.io/webauthn/#isUserVerifyingPlatformAuthenticatorAvailable",
-		"input":{"readonly":true},
+		"input":{"type":"text", "readonly":true},
 	},
 	{
 		"id":"PublicKeyCredentialCreationOptions",
@@ -59,130 +68,261 @@ var properties = [
 	{
 		"id":"publicKey.rp.name",
 		"href":"https://w3c.github.io/webauthn/",
-		"select":[location.origin, "webauthn-tester"],
-		"bind": obj => obj.on("change", e => console.log("bind: change")),
+		"input":{"type":"select", "values":[rp.name = location.origin, "webauthn-tester"]},
+		"bind": obj => obj.on("change", e => rp.name = $(e.target).val()),
 	},
 	{
 		"id":"publicKey.rp.id",
 		"href":"https://w3c.github.io/webauthn/",
-		"select":["", location.host],
-		"bind": obj => obj.on("change", e => console.log("bind: change")),
+		"input":{"type":"select", "values":["", location.host]},
+		"bind": obj => obj.on("change", e => rp.id = $(e.target).val()),
 	},
 	{
 		"id":"publicKey.rp.icon",
 		"href":"https://w3c.github.io/webauthn/",
-		"select":["", location.origin + "/webauthn-tester/rp.png"],
-		"bind": obj => obj.on("change", e => console.log("bind: change")),
+		"input":{"type":"select", "values":["", location.origin + "/webauthn-tester/rp.png"]},
+		"bind": obj => obj.on("change", e => rp.icon = $(e.target).val()),
 	},
 	// publicKey.user
 	{
 		"id":"publicKey.user.name",
 		"href":"https://w3c.github.io/webauthn/",
-		"input":{},
-		"bind": obj => obj.val("hello@example.com").on("input", e => console.log("bind: input")),
+		"input":{"type":"text"},
+		"bind": obj => obj.val(user.name).on("input", e => user.name = $(e.target).val()),
 	},
 	{
 		"id":"publicKey.user.displayName",
 		"href":"https://w3c.github.io/webauthn/",
-		"input":{},
-		"bind": obj => obj.val("Hello Example").on("input", e => console.log("bind: input")),
+		"input":{"type":"text"},
+		"bind": obj => obj.val(user.displayName).on("input", e => user.displayName = $(e.target).val()),
 	},
 	{
 		"id":"publicKey.user.icon",
 		"href":"https://w3c.github.io/webauthn/",
-		"select":["", location.origin + "/webauthn-tester/user.png"],
-		"bind": obj => obj.on("change", e => console.log("bind: change")),
+		"input":{"type":"select", "values":["", location.origin + "/webauthn-tester/user.png"]},
+		"bind": obj => obj.on("change", e => user.icon = $(e.target).val()),
 	},
-	//
+	// publicKey.excludeCredentials
+	{
+		"id":"publicKey.excludeCredentials",
+		"href":"https://w3c.github.io/webauthn/",
+		"input":{"type":"select", "values":[""]},
+		"bind": obj => createCredentialsList(obj, settings).on("change", e => excludeCredentials = $(e.target).val()),
+	},
+	// publicKey.authenticatorSelection
+	{
+		"id":"publicKey.authenticatorSelection.authenticatorAttachment",
+		"href":"https://w3c.github.io/webauthn/",
+		"input":{"type":"select", "values":["", "platform", "cross-platform"]},
+		"bind": obj => obj.on("change", e => authenticatorSelection.authenticatorAttachment = $(e.target).val()),
+	},
+	{
+		"id":"publicKey.authenticatorSelection.requireResidentKey",
+		"href":"https://w3c.github.io/webauthn/",
+		"input":{"type":"select", "values":["", "true", "false"]},
+		"bind": obj => obj.on("change", e => authenticatorSelection.requireResidentKey = toBoolean($(e.target).val())),
+	},
+	{
+		"id":"publicKey.authenticatorSelection.userVerification",
+		"href":"https://w3c.github.io/webauthn/",
+		"input":{"type":"select", "values":["", "required", "preferred", "discouraged"]},
+		"bind": obj => obj.on("change", e => authenticatorSelection.userVerification = $(e.target).val()),
+	},
+	// publicKey.timeout
+	{
+		"id":"publicKey.timeout",
+		"href":"https://w3c.github.io/webauthn/",
+		"input":{"type":"select", "values":["", "5000", "15000", "30000"]},
+		"bind": obj => obj.on("change", e => timeout = $(e.target).val()),
+	},
+	// publicKey.attestation
+	{
+		"id":"publicKey.attestation",
+		"href":"https://w3c.github.io/webauthn/",
+		"input":{"type":"select", "values":["", "none", "direct", "indirect"]},
+		"bind": obj => obj.on("change", e => attestation = $(e.target).val()),
+	},
+	// PublicKeyCredentialCreationOptions
 	{
 		"id":"PublicKeyCredentialCreationOptions",
+		"title":"",
 		"href":"https://w3c.github.io/webauthn/#dictdef-publickeycredentialcreationoptions",
-		"textarea":{"readonly":true},
+		"input":{"type":"textarea", "readonly":true}
+	},
+/*	
+	// credentials.create()
+	{
+		"id":"command",
+		"title":$("<input>").attr("type", "button").attr("value", "credentials.create()"),
+	},
+*/	
+	{
+		"id":"credentials.create",		
+		"title":"",
+		"input":{"type":"button","value":"credentials.create()"},
+		"bind":obj => obj.on("click", CreatePublicKeyCredential),
+	},
+	// PublicKeyCredential
+	{
+		"id":"PublicKeyCredential",
+		"href":"https://w3c.github.io/webauthn/",
+		"input":{"type":"textarea", "readonly":true}
+	},
+	// clientDataJSON
+	{
+		"id":"clientDataJSON",
+		"href":"https://w3c.github.io/webauthn/",
+		"input":{"type":"textarea", "readonly":true}
+	},
+	// attestationObject
+	{
+		"id":"attestationObject",
+		"href":"https://w3c.github.io/webauthn/",
+		"input":{"type":"textarea", "readonly":true}
+	},
+	// authData
+	{
+		"id":"authData",
+		"href":"https://w3c.github.io/webauthn/",
+		"input":{"type":"textarea", "readonly":true}
+	},
+	// credentialPublicKey
+	{
+		"id":"credentialPublicKey",
+		"href":"https://w3c.github.io/webauthn/",
+		"input":{"type":"textarea", "readonly":true}
 	},
 ];
-function FormChange() {
-	console.log("FormChange");
-}
-DOMContentLoaded.then(() => {
-	for(var i in properties) {
-		var div = $("<div>");
-		var property = properties[i];
-		
-		var left = $("<div>");
-		
-		var label = $("<label>")
-			.text(property.id);
-		if(property.input || property.select || property.textarea) {
-			label.attr("for", property.id);
+
+function GetPublicKeyCredentialCreationOptions() {
+	var challenge_promise = getRandomChallenge();
+	return challenge_promise.then(value => {
+		var publicKeyCredentialCreationOptions = {
+			"publicKey": {
+				"rp": {},
+				"user": {},
+				"challenge":value,
+				"pubKeyCredParams":[ 
+					{"type": "public-key", "alg": -7},
+					{"type": "public-key", "alg": -257},
+				],
+			}
+		};
+		if(!rp.name) delete rp.name;
+		if(!rp.id) delete rp.id;
+		if(!rp.icon) delete rp.icon;
+		publicKeyCredentialCreationOptions.publicKey.rp = rp;
+
+		if(!user.name) {
+			delete user.name;
+			delete user.id;
+		} else {
+			user.id = Uint8Array.from(user.name, t => t.charCodeAt(0));
 		}
-		left.append(label);	
+		if(!user.displayName) delete user.displayName;
+		if(!user.icon) delete user.icon;
+		publicKeyCredentialCreationOptions.publicKey.user = user;		
 
-		if(property.href) {
-			var a = $("<a>")
-				.attr("target", "_blank")				
-				.attr("href", property.href)
-				.text("w3c");
-			var span = $("<span>")
-				.attr("class", "w3c")
-				.append("[")
-				.append(a)
-				.append("]");
-			left.append(span);
-		} 
-
-		div.append(left);
+		if(excludeCredentials) {
+			publicKeyCredentialCreationOptions.publicKey.excludeCredentials = [];
+			if(excludeCredentials == "*") {
+				for(var i in settings.credentials) {
+					publicKeyCredentialCreationOptions.publicKey.excludeCredentials.push({
+						"id":decodeArray(i),
+						"type":"public-key",
+					});
+				}
+			} else {
+				publicKeyCredentialCreationOptions.publicKey.excludeCredentials.push({
+					"id":decodeArray(excludeCredentials),
+					"type":"public-key",
+				});
+			}
+		}
 		
-		if(property.input) {
-			var right = $("<div>");
-			var input = $("<input>")
-				.attr("type", "text")
-				.attr("id", property.id);
-			if(property.bind) {
-				property.bind(input);
-			}
-			if(property.input.readonly) {
-				input.attr("readonly", "readonly");
-			} else {
-				input.on("input", FormChange);
-				div.attr("class", "input");
-			}
-			right.append(input);
-			div.append(right);
-		} else if(property.select) {
-			var right = $("<div>");
-			var select = $("<select>")
-				.attr("id", property.id);
-			Object.values(property.select).forEach(v => {
-				var option = $("<option>").text(v);
-				select.append(option);
-			});
-			if(property.bind) {
-				property.bind(select);
-			}
-			select.on("change", FormChange);
-			right.append(select);
-			div.attr("class", "input");
-			div.append(right);
-		} else if(property.textarea) {
-			var right = $("<div>")
-				.attr("class", "wide");
-			var textarea = $("<textarea>")
-				.attr("rows", 2)
-				.attr("id", property.id);
-			if(property.bind) {
-				property.bind(textarea);
-			}
-			if(property.textarea.readonly) {
-				textarea.attr("readonly", "readonly");
-			} else {
-				textarea.on("input", FormChange);
-				div.attr("class", "input");
-			}
-			right.append(textarea);
-			div.append(right);
-		} 
-		$("body").append(div);
-	}
+		
+		if(timeout) publicKeyCredentialCreationOptions.publicKey.timeout = Number(timeout);
+		
+		if(!authenticatorSelection.authenticatorAttachment) delete authenticatorSelection.authenticatorAttachment;
+		if(authenticatorSelection.requireResidentKey == null) delete authenticatorSelection.requireResidentKey;
+		if(!authenticatorSelection.userVerification) delete authenticatorSelection.userVerification;
+		if(Object.keys(authenticatorSelection).length > 0) publicKeyCredentialCreationOptions.publicKey.authenticatorSelection = authenticatorSelection;
+		
+		if(attestation) publicKeyCredentialCreationOptions.publicKey.attestation = attestation;
+		
+		return publicKeyCredentialCreationOptions;
+	});
+}
+
+function CreatePublicKeyCredential() {
+	saveSettings(settings);
+	
+	$("#PublicKeyCredential").val("");
+	$("#clientDataJSON").val("");
+	$("#attestationObject").val("");
+	$("#authData").val("");
+	$("#credentialPublicKey").val("");
+	
+	publicKeyCredential_promise = publicKeyCredentialCreationOptions_promise
+		.then(value => navigator_credentials_create(value));
+		
+	DecodePublicKeyCredential();
+}
+
+function DecodePublicKeyCredential() {
+	publicKeyCredential_promise
+		.then(value => $("#PublicKeyCredential").removeClass("error").val(encodeJson(value)))
+		.catch(e => $("#PublicKeyCredential").addClass("error").val(e))
+	publicKeyCredential_promise.then(value => publicKeyCredential = value);
+
+	clientDataJSON_promise = publicKeyCredential_promise
+		.then(value => decodeClientDataJSON(value.response.clientDataJSON));
+	clientDataJSON_promise.then(value => $("#clientDataJSON").val(encodeJson(value)));
+	clientDataJSON_promise.then(value => clientDataJSON = value);
+	
+	attestationObject_promise = publicKeyCredential_promise
+		.then(value => decodeAttestationObject(value.response.attestationObject));
+	attestationObject_promise.then(value => $("#attestationObject").val(encodeJson(value)));
+	attestationObject_promise.then(value => attestationObject = value);
+
+	authData_promise = attestationObject_promise
+		.then(value => decodeAuthenticatorData(value.authData));
+	authData_promise.then(value => $("#authData").val(encodeJson(value)));
+	authData_promise.then(value => authData = value);
+
+	credentialPublicKey_promise = authData_promise
+		.then(value => decodeCredentialPublicKey(value.attestedCredentialData.credentialPublicKey));
+	credentialPublicKey_promise.then(value => $("#credentialPublicKey").val(encodeJson(value)));
+	credentialPublicKey_promise.then(value => credentialPublicKey = value);
+
+    Promise.all([publicKeyCredential_promise,credentialPublicKey_promise,publicKeyCredentialCreationOptions_promise])
+		.then(all => {
+			addCredential(settings, all[2].publicKey.user, all[0].id, all[1]);
+			createCredentialsList($("#publicKey\\.excludeCredentials"), settings);
+		})
+		.catch(e => console.error("addCredential: " + e));
+}
+
+function FormChange() {
+	publicKeyCredentialCreationOptions_promise = GetPublicKeyCredentialCreationOptions();
+	publicKeyCredentialCreationOptions_promise.then(value => $("#PublicKeyCredentialCreationOptions").val(encodeJson(publicKeyCredentialCreationOptions = value)));
+}
+
+DOMContentLoaded.then(() => { 
+	CreateGrid(properties, FormChange); 
+
+	// textarea auto-size
+	$.valHooks.textarea = {
+		set: (e, value) => { e.value = value; $(e).trigger("input"); }
+	};
+	$('textarea').each(function () {
+		this.style.height = (this.scrollHeight) + 'px';
+	}).on('input', function () {
+		this.style.height = 'auto';
+		this.style.height = (this.scrollHeight) + 'px';
+	});
+
+	FormChange(); 
 });
 </script>
 </head>

@@ -1,0 +1,40 @@
+body {
+	font-family: sans-serif;
+}
+body > div {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(50ch, 1fr));
+}
+div > div {
+	display: flex;
+	padding: 0.1em;
+}
+div > input[type='text'], div > select, div > textarea {
+	flex: auto;
+	width: 100%;
+	border: 1px solid lightgray;
+	background-color: white;
+	padding: 0.1em;
+}
+div > input[type='button'] {
+	font-size: larger;
+}
+div > div.wide {
+	grid-row: 2;
+}
+span.w3c {
+	margin-left: 0.2em;
+	color: gray;
+	font-size: smaller;
+	vertical-align: super;
+}
+a {
+	text-decoration: none;
+	color: unset;
+}
+a:hover, a:active {
+	text-decoration: underline;
+}
+.input input:hover, .input select:hover, .input textarea:hover {
+	border-color: black;
+}
