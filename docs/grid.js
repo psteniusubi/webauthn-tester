@@ -6,7 +6,8 @@ function CreateGrid(definition, onchange) {
 		if(!property.id) property.id = "grid" + i;
 		
 		if(property.title !== "") {
-			var left = $("<div>");			
+			var left = $("<div>")
+				.addClass("left");			
 
 			if(property.id && property.input) {
 				var label = $("<label>")
@@ -34,7 +35,8 @@ function CreateGrid(definition, onchange) {
 		}
 		
 		if(property.input) {
-			var right = $("<div>");
+			var right = $("<div>")
+				.addClass("right");
 			var input;
 			var change = null;
 			switch(property.input.type) {
@@ -72,7 +74,7 @@ function CreateGrid(definition, onchange) {
 			}
 			if(property.input.readonly) {
 				input.attr("readonly", "readonly");
-			} else if(change) {
+			} else if(change && onchange) {
 				input.on(change, onchange);
 				div.addClass("input");
 			}

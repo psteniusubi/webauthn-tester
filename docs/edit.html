@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/png" href="/favicon.png" />
+<style type="text/css">
+body {
+	font-family: sans-serif;
+}
+
+div.body > div {
+	display: flex;
+	padding: 0.1em;
+}
+div.body > div > textarea {
+	flex: auto;
+	width: 100%;
+	border: 1px solid lightgray;
+	background-color: white;
+	padding: 0.1em;
+}
+textarea {
+	height: auto;
+	white-space: pre;
+	word-wrap: normal;
+	word-break: normal;
+	overflow:hidden;
+}
+.error {
+	color:red;
+}
+div.body input[type='button'] {
+	font-size: larger;
+	margin-right: 0.3em;
+}
+
+div#menu {
+	display: grid;
+	grid-template-columns: auto auto auto;
+}
+div.instant {
+	min-size: 24ch;
+	margin-right: 1ch;
+}
+div.name {
+	min-size: 32ch;
+	margin-right: 1ch;
+}
+div.body > div, div#menu > div {
+	white-space: pre;
+	word-wrap: normal;
+	word-break: normal;
+	overflow: hidden;
+}
+
+a {
+	text-decoration: none;
+	color: unset;
+}
+a:hover, a:active {
+	text-decoration: underline;
+}
+.input input:hover, .input select:hover, .input textarea:hover {
+	border-color: black;
+}
+</style>
+<script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script type="text/javascript" src="grid.js"></script>
+<script type="text/javascript" src="settings.js"></script>
+<script type="text/javascript" src="base64url.js"></script>
+<script type="text/javascript" src="cbor.js"></script>
+<script type="text/javascript" src="webauthn.js"></script>
+<script type="text/javascript">
+var DOMContentLoaded = new Promise(resolve => window.addEventListener("DOMContentLoaded", () => resolve()));
+
+var settings = readSettings();
+
+window.addEventListener("hashchange", showCredential);
+
+function buildMenu() {
+	var menu = [];
+	Object.values(settings.credentials).forEach(credential => {
+		menu.push($("<div>").addClass("instant").text(credential.instant));
+		menu.push($("<div>").addClass("name").text(credential.user.name + " (" + credential.user.displayName + ")"));
+		var a = $("<a>").attr("href", "#" + credential.id).text(credential.id);
+		menu.push($("<div>").addClass("credentialId").append(a));
+	});
+	$("#menu").empty();
+	$("#menu").append(menu);
+}
+
+function add() {
+	try {
+		var cred = JSON.parse($("#credential").val());
+		if(cred && cred.id) {
+			settings.credentials[cred.id] = cred;
+			saveSettings(settings);
+			buildMenu();
+			location.hash = cred.id;
+		}
+	} catch(e) {
+	}
+}
+
+function remove() {
+	delete settings.credentials[location.hash.substr(1)];
+	saveSettings(settings);
+	buildMenu();
+	location.hash = "";
+}
+
+function removeAll() {
+	window.localStorage.removeItem("settings");
+	settings = readSettings();
+	buildMenu();
+	location.hash = "";
+}
+
+function clear() {
+	location.hash = "";
+}
+
+function showCredential() {
+	$("#credential").val("");
+	getCredential(settings, location.hash.substr(1))
+		.then(credential => $("#credential").val(encodeJson(credential)));
+}
+
+DOMContentLoaded.then(() => { 
+	buildMenu();
+	
+	$("#add").click(add);
+	$("#remove").click(remove);
+	$("#removeAll").click(removeAll);
+	$("#clear").click(clear);
+
+	// textarea auto-size
+	$.valHooks.textarea = {
+		set: (e, value) => { e.value = value; $(e).trigger("input"); }
+	};
+	$('textarea').each(function () {
+		this.style.height = (this.scrollHeight) + 'px';
+	}).on('input', function () {
+		this.style.height = 'auto';
+		this.style.height = (this.scrollHeight) + 'px';
+	});
+	
+	showCredential();
+});
+</script>
+</head>
+<body>
+
+<div class="body">
+<div>[<a href="create.html">create.html</a>] [<a href="get.html">get.html</a>] [<a href="edit.html">edit.html</a>]</div>
+</div>
+
+<div id="menu"></div>
+
+<div class="body">
+<div><textarea id="credential" rows="2"></textarea></div>
+</div>
+
+<div class="body">
+<div><input type="button" id="add" value="Add" /> <input type="button" id="remove" value="Remove" /> <input type="button" id="removeAll" value="Remove All" /> <input type="button" id="clear" value="Clear" /></div>
+</div>
+
+</body>
+</html>
