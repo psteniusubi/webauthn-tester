@@ -146,16 +146,9 @@ var properties = [
 	{
 		"id":"PublicKeyCredentialCreationOptions",
 		"title":"",
-		"href":"https://w3c.github.io/webauthn/#dictdef-publickeycredentialcreationoptions",
 		"input":{"type":"textarea", "readonly":true}
 	},
-/*	
 	// credentials.create()
-	{
-		"id":"command",
-		"title":$("<input>").attr("type", "button").attr("value", "credentials.create()"),
-	},
-*/	
 	{
 		"id":"credentials.create",		
 		"title":"",
@@ -271,36 +264,39 @@ function CreatePublicKeyCredential() {
 
 function DecodePublicKeyCredential() {
 	publicKeyCredential_promise
-		.then(value => $("#PublicKeyCredential").removeClass("error").val(encodeJson(value)))
+		.then(value => $("#PublicKeyCredential").removeClass("error").val(encodeJson(publicKeyCredential = value)))
 		.catch(e => $("#PublicKeyCredential").addClass("error").val(e))
-	publicKeyCredential_promise.then(value => publicKeyCredential = value);
 
 	clientDataJSON_promise = publicKeyCredential_promise
 		.then(value => decodeClientDataJSON(value.response.clientDataJSON));
-	clientDataJSON_promise.then(value => $("#clientDataJSON").val(encodeJson(value)));
-	clientDataJSON_promise.then(value => clientDataJSON = value);
+	clientDataJSON_promise
+		.then(value => $("#clientDataJSON").val(encodeJson(clientDataJSON = value)))
+		.catch(() => {});
 	
 	attestationObject_promise = publicKeyCredential_promise
 		.then(value => decodeAttestationObject(value.response.attestationObject));
-	attestationObject_promise.then(value => $("#attestationObject").val(encodeJson(value)));
-	attestationObject_promise.then(value => attestationObject = value);
+	attestationObject_promise
+		.then(value => $("#attestationObject").val(encodeJson(attestationObject = value)))
+		.catch(() => {});
 
 	authData_promise = attestationObject_promise
 		.then(value => decodeAuthenticatorData(value.authData));
-	authData_promise.then(value => $("#authData").val(encodeJson(value)));
-	authData_promise.then(value => authData = value);
+	authData_promise
+		.then(value => $("#authData").val(encodeJson(authData = value)))
+		.catch(() => {});		
 
 	credentialPublicKey_promise = authData_promise
 		.then(value => decodeCredentialPublicKey(value.attestedCredentialData.credentialPublicKey));
-	credentialPublicKey_promise.then(value => $("#credentialPublicKey").val(encodeJson(value)));
-	credentialPublicKey_promise.then(value => credentialPublicKey = value);
+	credentialPublicKey_promise
+		.then(value => $("#credentialPublicKey").val(encodeJson(credentialPublicKey = value)))
+		.catch(() => {});
 
     Promise.all([publicKeyCredential_promise,credentialPublicKey_promise,publicKeyCredentialCreationOptions_promise])
 		.then(all => {
 			addCredential(settings, all[2].publicKey.user, all[0].id, all[1]);
 			createCredentialsList($("#publicKey\\.excludeCredentials"), settings);
 		})
-		.catch(e => console.error("addCredential: " + e));
+		.catch(() => {});
 }
 
 function FormChange() {
@@ -321,6 +317,10 @@ DOMContentLoaded.then(() => {
 		this.style.height = 'auto';
 		this.style.height = (this.scrollHeight) + 'px';
 	});
+
+	PublicKeyCredential_isUserVerifyingPlatformAuthenticatorAvailable()
+		.then(value => $("#isUserVerifyingPlatformAuthenticatorAvailable").toggleClass("error", !value).val(value))
+		.catch(e => $("#isUserVerifyingPlatformAuthenticatorAvailable").addClass("error").val("Error: " + e));
 
 	FormChange(); 
 });
