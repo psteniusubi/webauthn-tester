@@ -114,7 +114,7 @@ function decodeClientDataJSON(data) {
 
 https://w3c.github.io/webauthn/#dom-authenticatorattestationresponse-attestationobject
 
-attestationObject is CBOR encoded
+attestationObject is CBOR encoded. The code below uses cbor.js from https://github.com/paroga/cbor-js.
 
 ```javascript
 function decodeAttestationObject(data) {
@@ -126,7 +126,7 @@ function decodeAttestationObject(data) {
 
 https://w3c.github.io/webauthn/#sec-authenticator-data
 
-Authenticator data (authData and authenticatorData) is a compact binary encoding
+Authenticator data (authData and authenticatorData) is a compact binary encoding.
 
 ```javascript
 function decodeAuthenticatorData(data) {
@@ -194,7 +194,9 @@ function decodeAuthenticatorData(data) {
 https://w3c.github.io/webauthn/#credentialpublickey
 https://w3c.github.io/webauthn/#sctn-encoded-credPubKey-examples
 
-credentialPublicKey is COSE encoded. This translates COSE to JWK, a more human readable format.
+credentialPublicKey is COSE encoded. This code translates COSE to JWK, a more human readable format. 
+
+It is not a general purpose COSE translator. Only WebAuthn algorithm identifiers are recognized.
 
 ```javascript
 function decodeCredentialPublicKey(data) {
@@ -303,7 +305,7 @@ function decodeSignature(publicKey, signature) {
 https://w3c.github.io/webauthn/#assertion-signature
 https://w3c.github.io/webauthn/#op-get-assertion
 
-To verify assertion signature with WebCrypto the algorithm identifiers, signature value and public key need to be translated into WebCrypto compatible structures.
+To verify assertion signature with WebCrypto the algorithm identifiers, signature value and public key need to be translated into WebCrypto compatible format.
 
 The signature is calculated over `authenticatorData || sha256(clientDataJSON)`.
 
