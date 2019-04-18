@@ -104,7 +104,7 @@ function replacer(k,v) {
 
 https://w3c.github.io/webauthn/#dom-authenticatorresponse-clientdatajson
 
-clientDataJSON is a JSON object serialized to bytes. The code below assumes only 8-bit characters.
+clientDataJSON is a JSON object serialized to bytes. The code below assumes only ASCII characters.
 
 ```javascript
 function decodeClientDataJSON(data) {
