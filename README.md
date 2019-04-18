@@ -120,7 +120,7 @@ function decodeAttestationObject(data) {
 
 https://w3c.github.io/webauthn/#sec-authenticator-data
 
-Authenticator data (authData or authenticatorData) is a compact binary encoding
+Authenticator data (authData and authenticatorData) is a compact binary encoding
 
 ```javascript
 function decodeAuthenticatorData(data) {
@@ -188,7 +188,7 @@ function decodeAuthenticatorData(data) {
 https://w3c.github.io/webauthn/#credentialpublickey
 https://w3c.github.io/webauthn/#sctn-encoded-credPubKey-examples
 
-credentialPublicKey is COSE encoded. 
+credentialPublicKey is COSE encoded. This translates COSE to JWK, a more human readable format.
 
 ```javascript
 function decodeCredentialPublicKey(data) {
@@ -248,7 +248,7 @@ See [authData](#authData)
 
 https://w3c.github.io/webauthn/#signature-attestation-types
 
-The R and S components of the EC signature are ASN.1 encoded
+The R and S components of the EC signature of WebAuthn are ASN.1 encoded. The code below translates to WebCrypto compatible signature format.
 
 ```javascript
 function decodeSignature(publicKey, signature) {
@@ -297,9 +297,11 @@ function decodeSignature(publicKey, signature) {
 https://w3c.github.io/webauthn/#assertion-signature
 https://w3c.github.io/webauthn/#op-get-assertion
 
-To verify assertion signature with WebCrypto the algorithm identifiers and public keys need to be translated into WebCrypto compatible structures.
+To verify assertion signature with WebCrypto the algorithm identifiers, signature value and public key need to be translated into WebCrypto compatible structures.
 
 The signature is calculated over `authenticatorData || sha256(clientDataJSON)`.
+
+Note that WebCrypto in Microsoft Edge does not support EC signature algorithm. EC is commonly used with cross-platform (USB connected) authenticators.
 
 ```javascript
 function verifyAssertionSignature(publicKeyCredential, publicKey) {    
@@ -346,77 +348,77 @@ function verifyAssertionSignature(publicKeyCredential, publicKey) {
 }
 
 function importJWK(jwk, alg) {
-	var key;
-	switch(jwk.kty) {
-		case "EC":
-			key = {
-				"kty": jwk.kty,
-				"crv": jwk.crv,
-				"x": jwk.x,
-				"y": jwk.y
-			};
-			break;
-		case "RSA":
-			key = {
-				"kty": jwk.kty,
-				"n": jwk.n,
-				"e": jwk.e
-			};
-			break;
-		default:
-			return Promise.reject("Invalid argument: kty=" + jwk.kty);
-	}
-	var algorithm = getAlgorithm(jwk, alg);
-	return crypto.subtle.importKey("jwk", key, algorithm, false, ["verify"]);
+    var key;
+    switch(jwk.kty) {
+        case "EC":
+            key = {
+                "kty": jwk.kty,
+                "crv": jwk.crv,
+                "x": jwk.x,
+                "y": jwk.y
+            };
+            break;
+        case "RSA":
+            key = {
+                "kty": jwk.kty,
+                "n": jwk.n,
+                "e": jwk.e
+            };
+            break;
+        default:
+            return Promise.reject("Invalid argument: kty=" + jwk.kty);
+    }
+    var algorithm = getAlgorithm(jwk, alg);
+    return crypto.subtle.importKey("jwk", key, algorithm, false, ["verify"]);
 }
 
 function getAlgorithm(jwk, alg) {
-	var algorithm;
-	switch(jwk.kty) {
-		case "EC":
-			algorithm = {
-				"name":"ECDSA",
-				"namedCurve": jwk.crv,
-			};
-			break;
-		case "RSA":
-			algorithm = {
-				"name": "RSASSA-PKCS1-v1_5",
-			};
-			break;
-		default:
-			return Promise.reject("Invalid argument: kty=" + jwk.kty);
-	}
-	var a = alg || jwk.alg || "S256";
-	switch(a) {
-		case "RS512":
-		case "ES512":
-		case "S512":
-			algorithm.hash = {
-				name: "SHA-512"
-			};
-			break;
-		case "RS384":
-		case "ES384":
-		case "S384":
-			algorithm.hash = {
-				name: "SHA-384"
-			};
-			break;
-		case "RS256":
-		case "ES256":
-		case "S256":
-			algorithm.hash = {
-				name: "SHA-256"
-			};
-			break;
-		default:
-			return Promise.reject("Invalid argument: alg=" + a);
-	}
-	return algorithm;
+    var algorithm;
+    switch(jwk.kty) {
+        case "EC":
+            algorithm = {
+                "name":"ECDSA",
+                "namedCurve": jwk.crv,
+            };
+            break;
+        case "RSA":
+            algorithm = {
+                "name": "RSASSA-PKCS1-v1_5",
+            };
+            break;
+        default:
+            return Promise.reject("Invalid argument: kty=" + jwk.kty);
+    }
+    var a = alg || jwk.alg || "S256";
+    switch(a) {
+        case "RS512":
+        case "ES512":
+        case "S512":
+            algorithm.hash = {
+                name: "SHA-512"
+            };
+            break;
+        case "RS384":
+        case "ES384":
+        case "S384":
+            algorithm.hash = {
+                name: "SHA-384"
+            };
+            break;
+        case "RS256":
+        case "ES256":
+        case "S256":
+            algorithm.hash = {
+                name: "SHA-256"
+            };
+            break;
+        default:
+            return Promise.reject("Invalid argument: alg=" + a);
+    }
+    return algorithm;
 }
 
 function sha256(data) {
-	return crypto.subtle.digest("SHA-256", data);
+    return crypto.subtle.digest("SHA-256", data);
 }
 ```
