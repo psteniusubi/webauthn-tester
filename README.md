@@ -1,4 +1,4 @@
-# Web Authentication API Tester
+# WebAuthn API Tester
 
 https://psteniusubi.github.io/webauthn-tester/
 
@@ -13,6 +13,8 @@ Beginning Windows 10 version 1903 (May 2019 update) also Chrome and Firefox use 
 Recent versions of Chrome on Android have WebAuthn support.
 
 Preview versions of Safari on iOS and OS X should have WebAuthn support.
+
+This is status by April 2019. 
 
 # Instructions
 
@@ -46,7 +48,7 @@ the tool will render this as
 "challenge": "SABWyoy28rCoCVR3DTDuLyUQb2nXg_wPiZ5c6O2DV0U"
 ```
 
-Rendering is implemented with JSON.stringify and a replacer function. For example
+Rendering is implemented with `JSON.stringify` and a replacer function. For example
 
 ```javascript
 function replacer(k,v) {
