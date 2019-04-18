@@ -114,7 +114,7 @@ function decodeAttestationObject(data) {
 
 ### <a name="authData">authData</a>
 
-``´javascript
+```javascript
 /**
  * https://w3c.github.io/webauthn/#sec-authenticator-data
  */
@@ -176,7 +176,7 @@ function decodeAuthenticatorData(data) {
 	}
 	return authenticatorData;
 }
-``´
+```
 
 ### credentialPublicKey
 
