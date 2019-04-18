@@ -194,11 +194,12 @@ function decodeAuthenticatorData(data) {
 ### credentialPublicKey
 
 https://w3c.github.io/webauthn/#credentialpublickey
+
 https://w3c.github.io/webauthn/#sctn-encoded-credPubKey-examples
 
 credentialPublicKey is COSE encoded. This code translates COSE to JWK, a more human readable format. 
 
-It is not a general purpose COSE translator. Only WebAuthn algorithm identifiers are recognized.
+This is not a general purpose COSE translator. Only WebAuthn algorithm identifiers are recognized.
 
 ```javascript
 function decodeCredentialPublicKey(data) {
@@ -258,7 +259,9 @@ See [authData](#authData)
 
 https://w3c.github.io/webauthn/#signature-attestation-types
 
-The R and S components of the EC signature of WebAuthn are ASN.1 encoded. The code below translates to WebCrypto compatible signature format.
+The R and S components of the EC signature of WebAuthn are ASN.1 encoded. The code below translates to WebCrypto compatible signature format. 
+
+This implementation only supports 256 bit R and S components of ES256 algorithm.
 
 ```javascript
 function decodeSignature(publicKey, signature) {
@@ -305,6 +308,7 @@ function decodeSignature(publicKey, signature) {
 ### verifyAssertionSignature 
 
 https://w3c.github.io/webauthn/#assertion-signature
+
 https://w3c.github.io/webauthn/#op-get-assertion
 
 To verify assertion signature with WebCrypto the algorithm identifiers, signature value and public key need to be translated into WebCrypto compatible format.
