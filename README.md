@@ -4,15 +4,15 @@ https://psteniusubi.github.io/webauthn-tester/
 
 ## Requirements
 
-You need a FIDO authenticator to use the tool. 
+You need a WebAuthn authenticator to use the tool. Windows Hello, Android Fingerprint or Apple Touch ID are examples of very common authenticators.
 
-If you are using Windows 10 version 1809 or later, then you only need to [set up Windows Hello](https://support.microsoft.com/en-us/help/4028017/windows-learn-about-windows-hello-and-set-it-up) as your FIDO authenticator and use Microsoft Edge to run the tool.
+If you are using Windows 10 version 1809 or later, then you only need to [set up Windows Hello](https://support.microsoft.com/en-us/help/4028017/windows-learn-about-windows-hello-and-set-it-up) and use Microsoft Edge to run the tool.
 
-Beginning Windows 10 version 1903 (May 2019 update) also Chrome and Firefox use Windows Hello as their FIDO authenticators.
+Beginning Windows 10 version 1903 (May 2019 update) also Chrome and Firefox are using Windows Hello as their platform authenticators.
 
-Recent versions of Chrome on Android have WebAuthn support.
+With Android and OS X you can use a recent version of Chrome.
 
-Preview versions of Safari on iOS and OS X should have WebAuthn support.
+With iOS and OS X it should be possible to use Safari with experimental Web Authentication support enabled.
 
 This is status by April 2019. 
 
