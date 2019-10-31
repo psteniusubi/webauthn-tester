@@ -50,7 +50,8 @@ function generateKey() {
     var put_promise = Promise.all([db_promise, key_promise])
         .then(all => db_put(all[0], "KeyPair", { id: 0, publicKey: all[1].publicKey, privateKey: all[1].privateKey }))
         .then(db_close);
-    Promise.all([db_promise, key_promise, jwk_promise, put_promise])
+    return Promise.all([db_promise, key_promise, jwk_promise, put_promise])
+		.then(all => all[1])
         .catch(error => console.error("generateKey " + error));
 }
 
