@@ -1,5 +1,7 @@
 # WebAuthn API Tester
 
+This is a browser based WebAuthn API Tester. Launch by navigating to following page
+
 https://psteniusubi.github.io/webauthn-tester/
 
 ## Requirements
