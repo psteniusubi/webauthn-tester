@@ -4,7 +4,7 @@ This is a browser based WebAuthn API Tester. Launch by navigating to following p
 
 https://psteniusubi.github.io/webauthn-tester/
 
-The [Working with FIDO and the WebAuthn API](https://www.ubisecure.com/api/fido-webauthn-api/) article covers the WebAuthn API in more detail.
+The [Working with FIDO and the WebAuthn API](https://www.ubisecure.com/api/fido-webauthn-api/) article covers the WebAuthn API and use cases in more detail.
 
 ## Requirements
 
