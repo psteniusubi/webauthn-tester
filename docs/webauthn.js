@@ -4,9 +4,9 @@
  * cbor.js (from https://github.com/paroga/cbor-js)
  */
 
-function toBoolean(value) { 
-	if("true" == value) return true;
-	if("false" == value) return false;
+function toBoolean(value) {
+	if ("true" === value) return true;
+	if ("false" === value) return false;
 	return null;
 }
 
@@ -21,42 +21,42 @@ function decodeArray(value) {
 /**
  * replacer method for JSON.stringify
  */
-function replacer(k,v) {
-	if(v && v.constructor === Uint8Array) {
+function replacer(k, v) {
+	if (v instanceof Uint8Array) {
 		return encodeArray(v);
 	}
-	if(v && v.constructor === ArrayBuffer) {
+	if (v instanceof ArrayBuffer) {
 		return encodeArray(v);
 	}
-	if(v && v.constructor === PublicKeyCredential) {
+	if (v instanceof PublicKeyCredential) {
 		return {
 			// https://w3c.github.io/webappsec-credential-management/#credential
 			id: v.id,
 			type: v.type,
 			// https://w3c.github.io/webauthn/#publickeycredential
 			rawId: v.rawId,
-			response: v.response,
+			response: v.response, // either AuthenticatorAttestationResponse or AuthenticatorAssertionResponse
 		};
 	}
-	if(v && v.constructor === AuthenticatorAttestationResponse) {
+	if (v instanceof AuthenticatorAttestationResponse) {
 		return {
 			// https://w3c.github.io/webauthn/#authenticatorresponse
 			clientDataJSON: v.clientDataJSON,
 			// https://w3c.github.io/webauthn/#authenticatorattestationresponse
-			attestationObject: v.attestationObject, 
+			attestationObject: v.attestationObject,
 		};
 	}
-	if(v && v.constructor === AuthenticatorAssertionResponse) {
+	if (v instanceof AuthenticatorAssertionResponse) {
 		return {
 			// https://w3c.github.io/webauthn/#authenticatorresponse
 			clientDataJSON: v.clientDataJSON,
 			// https://w3c.github.io/webauthn/#authenticatorassertionresponse
-			authenticatorData: v.authenticatorData, 
-			signature: v.signature, 
-			userHandle: v.userHandle, 
+			authenticatorData: v.authenticatorData,
+			signature: v.signature,
+			userHandle: v.userHandle,
 		};
 	}
-	if(v && v.constructor === CryptoKey) {
+	if (v instanceof CryptoKey) {
 		return {
 			// https://w3c.github.io/webcrypto/#cryptokey-interface
 			type: v.type,
@@ -121,10 +121,10 @@ function decodeAttestationObject(data) {
  * https://w3c.github.io/webauthn/#sec-authenticator-data
  */
 function decodeAuthenticatorData(data) {
-	if(data.constructor === Uint8Array) {
+	if (data.constructor === Uint8Array) {
 		data = data.buffer.slice(data.byteOffset, data.byteLength + data.byteOffset);
 	}
-	if(data.constructor !== ArrayBuffer) {
+	if (data.constructor !== ArrayBuffer) {
 		throw "Invalid argument: " + data.constructor;
 	}
 	/**
@@ -157,7 +157,7 @@ function decodeAuthenticatorData(data) {
 		signCount: signCount,
 	};
 	// attestedCredentialData 
-	if(authenticatorData.flags.at) {
+	if (authenticatorData.flags.at) {
 		/**
 		 * https://w3c.github.io/webauthn/#sec-attested-credential-data
 		 *
@@ -184,36 +184,36 @@ function decodeAuthenticatorData(data) {
  */
 function coseToJwk(data) {
 	var alg, crv;
-	switch(data[1]) {		
+	switch (data[1]) {
 		case 2: // EC
-			switch(data[3]) {
+			switch (data[3]) {
 				case -7: alg = "ES256"; break;
 				default: throw "Invalid argument";
 			}
-			switch(data[-1]) {
+			switch (data[-1]) {
 				case 1: crv = "P-256"; break;
 				default: throw "Invalid argument";
 			}
-			if(!data[-2] || !data[-3]) throw "Invalid argument";
+			if (!data[-2] || !data[-3]) throw "Invalid argument";
 			return {
-				"kty":"EC",
-				"alg":alg,
-				"crv":crv,
-				"x":encodeArray(data[-2]),
-				"y":encodeArray(data[-3]),
+				"kty": "EC",
+				"alg": alg,
+				"crv": crv,
+				"x": encodeArray(data[-2]),
+				"y": encodeArray(data[-3]),
 			};
 		case 3: // RSA
-			switch(data[3]) {
+			switch (data[3]) {
 				case -37: alg = "PS256"; break;
 				case -257: alg = "RS256"; break;
 				default: throw "Invalid argument";
 			}
-			if(!data[-1] || !data[-2]) throw "Invalid argument";
+			if (!data[-1] || !data[-2]) throw "Invalid argument";
 			return {
-				"kty":"RSA",
-				"alg":alg,
-				"n":encodeArray(data[-1]),
-				"e":encodeArray(data[-2]),
+				"kty": "RSA",
+				"alg": alg,
+				"n": encodeArray(data[-1]),
+				"e": encodeArray(data[-2]),
 			};
 		default: throw "Invalid argument";
 	}
@@ -225,10 +225,10 @@ function coseToJwk(data) {
  */
 function getAlgorithm(jwk, alg) {
 	var algorithm;
-	switch(jwk.kty) {
+	switch (jwk.kty) {
 		case "EC":
 			algorithm = {
-				"name":"ECDSA",
+				"name": "ECDSA",
 				"namedCurve": jwk.crv,
 			};
 			break;
@@ -241,7 +241,7 @@ function getAlgorithm(jwk, alg) {
 			return Promise.reject("Invalid argument: kty=" + jwk.kty);
 	}
 	var a = alg || jwk.alg || "S256";
-	switch(a) {
+	switch (a) {
 		case "RS512":
 		case "ES512":
 		case "S512":
@@ -271,7 +271,7 @@ function getAlgorithm(jwk, alg) {
 
 function importJWK(jwk, alg) {
 	var key;
-	switch(jwk.kty) {
+	switch (jwk.kty) {
 		case "EC":
 			key = {
 				"kty": jwk.kty,
@@ -308,13 +308,13 @@ function decodeCredentialPublicKey(data) {
  * https://w3c.github.io/webauthn/#signature-attestation-types
  */
 function decodeSignature(publicKey, signature) {
-	if(signature.constructor === Uint8Array) {
+	if (signature.constructor === Uint8Array) {
 		signature = signature.buffer.slice(signature.byteOffset, signature.byteLength + signature.byteOffset);
 	}
-	if(signature.constructor !== ArrayBuffer) {
+	if (signature.constructor !== ArrayBuffer) {
 		return Promise.reject("Invalid argument: " + signature.constructor);
 	}
-	if(publicKey.kty == "EC") {
+	if (publicKey.kty == "EC") {
 		/*
 			0x30|b1|0x02|b2|r|0x02|b3|s
 			b1 = Length of remaining data
@@ -324,23 +324,23 @@ function decodeSignature(publicKey, signature) {
 		var rs = new Uint8Array(64);
 		var view = new DataView(signature);
 		var offset = 0;
-		if(view.getUint8(offset++) != 0x30) return Promise.reject("Invalid argument");
+		if (view.getUint8(offset++) != 0x30) return Promise.reject("Invalid argument");
 		var b1 = view.getUint8(offset++);
-		if(view.getUint8(offset++) != 0x02) return Promise.reject("Invalid argument");
+		if (view.getUint8(offset++) != 0x02) return Promise.reject("Invalid argument");
 		var b2 = view.getUint8(offset++);
-		if(b2 > 32) {
+		if (b2 > 32) {
 			b2--;
 			offset++;
 		}
-		rs.set(new Uint8Array(view.buffer.slice(offset, offset+b2)), 0);
+		rs.set(new Uint8Array(view.buffer.slice(offset, offset + b2)), 0);
 		offset += b2;
-		if(view.getUint8(offset++) != 0x02) return Promise.reject("Invalid argument");
+		if (view.getUint8(offset++) != 0x02) return Promise.reject("Invalid argument");
 		var b3 = view.getUint8(offset++);
-		if(b3 > 32) {
+		if (b3 > 32) {
 			b3--;
 			offset++;
 		}
-		rs.set(new Uint8Array(view.buffer.slice(offset, offset+b3)), b2);
+		rs.set(new Uint8Array(view.buffer.slice(offset, offset + b3)), b2);
 		return Promise.resolve(rs);
 	} else {
 		return Promise.resolve(signature);
@@ -355,40 +355,40 @@ function sha256(data) {
  * https://w3c.github.io/webauthn/#assertion-signature
  * https://w3c.github.io/webauthn/#op-get-assertion
  */
-function verifyAssertionSignature(publicKeyCredential, publicKey) {	
-	
+function verifyAssertionSignature(publicKeyCredential, publicKey) {
+
 	var alg = publicKey.alg || "S256";
 
 	var key_promise = importJWK(publicKey, alg);
-	
+
 	key_promise
 		.then(value => console.log("importKey: return " + encodeJson(value)))
 		.catch(e => console.error("importKey: " + JSON.stringify(e)));
-	
+
 	var hash_promise = sha256(publicKeyCredential.response.clientDataJSON);
-	
+
 	hash_promise
 		.then(value => console.log("sha256: return " + replacer(null, value)))
 		.catch(e => console.error("sha256: " + e));
-	
+
 	var signed_promise = hash_promise.then(value => {
 		var signed = new Uint8Array(publicKeyCredential.response.authenticatorData.byteLength + value.byteLength);
 		signed.set(new Uint8Array(publicKeyCredential.response.authenticatorData), 0);
 		signed.set(new Uint8Array(value), publicKeyCredential.response.authenticatorData.byteLength);
 		return signed;
 	});
-	
+
 	signed_promise
 		.then(value => console.log("signed: return " + replacer(null, value)))
 		.catch(e => console.error("signed: " + e));
-		
+
 	var signature_promise = decodeSignature(publicKey, publicKeyCredential.response.signature);
 
 	signature_promise
 		.then(value => console.log("signature: return " + replacer(null, value)))
 		.catch(e => console.error("signature: " + e));
-	
-	var verify_promise = Promise.all([key_promise,signed_promise,signature_promise])
+
+	var verify_promise = Promise.all([key_promise, signed_promise, signature_promise])
 		.then(all => crypto.subtle.verify(getAlgorithm(publicKey, alg), all[0], all[2], all[1]));
 
 	verify_promise
