@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Create credential</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <link rel="icon" href="../../assets/common/images/favicon.png" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" type="text/css" href="../../assets/common/styles/ubisecure.css" />
+    <link rel="stylesheet" type="text/css" href="../../oidc-tester/assets/local/styles/collapsed.css" />
+    <style type="text/css">
+        :root {
+            --font-size: 12pt;
+            --grid-main-area-width: minmax(auto, 72em);
+        }
+    </style>
+    <script type="module">
+        import { parsed } from "../../assets/common/modules/document-promises.js";
+        import { create_repository_menu, set_button_href_handlers } from "../../assets/common/modules/helper-module.js";
+        import * as WebAuthn from "./assets/local/modules/WebAuthnTypes.js";
+        import { atobUrlSafe, btoaUrlSafe } from "../../oidc-tester/assets/common/modules/base64url.js";
+        async function build_page() {
+            await parsed;
+            await create_repository_menu();
+            await set_button_href_handlers();
+            await isUserVerifyingPlatformAuthenticatorAvailable();
+            await buildPublicKeyCredentialCreationOptions();
+        }
+        build_page();
+
+        async function isUserVerifyingPlatformAuthenticatorAvailable() {
+            await parsed;
+            const section = document.getElementById("PublicKeyCredential");
+            const input = section.querySelector(`input[name="isUserVerifyingPlatformAuthenticatorAvailable"]`);
+            try {
+                const value = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+                input.value = value;
+                input.classList.remove("error");
+            } catch (error) {
+                input.value = error.toString();
+                input.classList.add("error");
+            }
+        }
+
+        function createProperties(parent, before, property) {
+            const label = document.createElement("label");
+            const span = document.createElement("span");
+            span.innerText = property.name;
+            label.appendChild(span);
+            if (property.input.type === "select") {
+                const select = document.createElement("select");
+                select.classList.add("flex1");
+                select.setAttribute("name", property.name);
+                select.setAttribute("placeholder", property.name);
+                let selected = 0;
+                for (const value of property.input.values) {
+                    const option = document.createElement("option");
+                    option.innerText = value;
+                    if (property.input.selected == selected++) {
+                        option.setAttribute("selected", "selected");
+                    }
+                    select.appendChild(option);
+                }
+                label.appendChild(select);
+            } else if (property.input.type === "text") {
+                const input = document.createElement("input");
+                input.classList.add("flex1");
+                input.setAttribute("type", "text");
+                input.setAttribute("name", property.name);
+                input.setAttribute("placeholder", property.name);
+                input.setAttribute("value", property.input.value);
+                if (property.input.readonly === true) {
+                    input.readOnly = true;
+                }
+                label.appendChild(input);
+            } else {
+                throw Error("invalid argument");
+            }
+            parent.insertBefore(label, before);
+        }
+
+        const isNull = value => value === null || value === undefined;
+        const notNull = value => value !== null && value !== undefined;
+        const isEmpty = value => isNull(value) || value === "";
+        const notEmpty = value => notNull(value) && value !== "";
+        const ifNotNull = value => notNull(value) ? value : undefined;
+        const ifNotEmpty = value => notEmpty(value) ? value : undefined;
+
+        async function buildPublicKeyCredentialCreationOptions() {
+            await parsed;
+            document.getElementById("_origin").innerText = location.origin;
+            document.getElementById("_host").innerText = location.host;
+            const section = document.getElementById("PublicKeyCredentialCreationOptions");
+            const form = section.querySelector("form");
+            form.addEventListener("input", e => {
+            });
+            form.addEventListener("submit", async e => {
+                e.preventDefault();
+                const publicKey = new WebAuthn.PublicKeyCredentialCreationOptions();
+                publicKey.rp.name = ifNotEmpty(form["rp.name"].value);
+                publicKey.rp.id = ifNotEmpty(form["rp.id"].value);
+                publicKey.user.name = ifNotEmpty(form["user.name"].value);
+                publicKey.user.displayName = ifNotEmpty(form["user.displayName"].value);
+                publicKey.challenge = new ArrayBuffer(20);
+                publicKey.pubKeyCredParams = [
+                    new WebAuthn.PublicKeyCredentialParameters("public-key", -7),
+                    new WebAuthn.PublicKeyCredentialParameters("public-key", -257),
+                ];
+                publicKey.timeout = notEmpty(form["timeout"].value) ? Number(form["timeout"].value) : undefined;
+                publicKey.excludeCredentials = [];
+                publicKey.authenticatorSelection.authenticatorAttachment = ifNotEmpty(form["authenticatorSelection.authenticatorAttachment"].value);;
+                publicKey.authenticatorSelection.residentKey = ifNotEmpty(form["authenticatorSelection.residentKey"].value);;
+                publicKey.authenticatorSelection.userVerification = ifNotEmpty(form["authenticatorSelection.userVerification"].value);;
+                publicKey.attestation = ifNotEmpty(form["attestation"].value);
+                const options = new WebAuthn.CredentialCreationOptions();
+                options.publicKey = publicKey;
+                const o = options.toJson();
+                console.log(JSON.stringify(o, replacer, 2));
+                try {
+                    const cred = await navigator.credentials.create(o);
+                } catch (error) {
+                    console.error(error);
+                }
+            })
+        }
+
+        function replacer(k, v) {
+            if (v instanceof ArrayBuffer) {
+                return replacer(k, new Uint8Array(v));
+            }
+            if (v instanceof Uint8Array) {
+                return btoaUrlSafe(Array.from(v, t => String.fromCharCode(t)).join(""));
+            }
+            return v;
+        }
+
+        async function XX_buildPublicKeyCredentialCreationOptions() {
+            await parsed;
+            const section = document.getElementById("PublicKeyCredentialCreationOptions");
+            const properties = [
+                {
+                    name: "rp.name",
+                    input: { type: "select", values: ["", location.origin, "webauthn-tester"], selected: 1 },
+                },
+                {
+                    name: "rp.id",
+                    input: { type: "select", values: ["", location.host] },
+                },
+                {
+                    name: "user.name",
+                    input: { type: "text", value: "hello@example.com" },
+                },
+                {
+                    name: "user.displayName",
+                    input: { type: "text", value: "Hello Example" },
+                },
+                {
+                    name: "timeout",
+                    input: { type: "select", values: ["", "5000", "15000", "30000"] }
+                },
+                {
+                    name: "excludeCredentials",
+                    input: { type: "select", values: ["", "All"] }
+                },
+                {
+                    name: "authenticatorSelection.authenticatorAttachment",
+                    input: { type: "select", values: ["", "platform", "cross-platform"] }
+                },
+                {
+                    name: "authenticatorSelection.residentKey",
+                    input: { type: "select", values: ["", "discouraged", "preferred", "required"] }
+                },
+                {
+                    name: "authenticatorSelection.userVerification",
+                    input: { type: "select", values: ["", "required", "preferred", "discouraged"] }
+                },
+                {
+                    name: "attestation",
+                    input: { type: "select", values: ["", "none", "indirect", "direct", "enterprise"] }
+                },
+            ];
+            const parent = section.querySelector("form");
+            const before = parent.querySelector("div");
+            for (const property of properties) {
+                createProperties(parent, before, property);
+            }
+        }
+    </script>
+</head>
+
+<body>
+
+    <header>
+        <nav>
+            <button href="./index.html" target="_self">
+                <icon class="home"></icon>&nbsp;<span>Home</span>
+            </button>
+            <button href="create.html" target="_self">Create</button>
+            <button href="get.html" target="_self">Get</button>
+            <button href="edit.html" target="_self">Edit</button>
+            <div>
+                <button>
+                    <span>Repositories</span>&nbsp;<icon class="arrow-drop-down"></icon>
+                </button>
+                <div id="repository_menu">
+                    <button href="https://github.com/psteniusubi?tab=repositories">All Repositories</button>
+                </div>
+            </div>
+        </nav>
+        <nav>
+            <button href="https://ubisecure.com" class="ubisecure-standard-logo-h-reverse">&nbsp;</button>
+        </nav>
+    </header>
+
+    <main>
+        <section class="outline">
+            <section id="PublicKeyCredential" class="collapsed">
+                <input type="checkbox" id="PublicKeyCredential_hide" checked />
+                <h2><label for="PublicKeyCredential_hide">PublicKeyCredential</label></h2>
+                <section>
+                    <form autocomplete="off" novalidate>
+                        <label>
+                            <span>isUserVerifyingPlatformAuthenticatorAvailable</span>
+                            <input class="flex1" type="text" placeholder="isUserVerifyingPlatformAuthenticatorAvailable"
+                                name="isUserVerifyingPlatformAuthenticatorAvailable" readonly />
+                        </label>
+                    </form>
+                </section>
+            </section>
+        </section>
+
+        <section class="outline">
+            <section id="PublicKeyCredentialCreationOptions" class="collapsed">
+                <input type="checkbox" id="PublicKeyCredentialCreationOptions_hide" checked />
+                <h2><label for="PublicKeyCredentialCreationOptions_hide">PublicKeyCredentialCreationOptions</label></h2>
+                <section>
+                    <form autocomplete="off" novalidate="">
+                        <label>
+                            <span>rp.name</span>
+                            <select class="flex1" name="rp.name" placeholder="rp.name">
+                                <option></option>
+                                <option selected="selected" id="_origin"></option>
+                                <option>webauthn-tester</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>rp.id</span>
+                            <select class="flex1" name="rp.id" placeholder="rp.id">
+                                <option></option>
+                                <option id="_host"></option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>user.name</span>
+                            <input class="flex1" type="text" name="user.name" placeholder="user.name"
+                                value="hello@example.com">
+                        </label>
+                        <label>
+                            <span>user.displayName</span>
+                            <input class="flex1" type="text" name="user.displayName" placeholder="user.displayName"
+                                value="Hello Example">
+                        </label>
+                        <label>
+                            <span>timeout</span>
+                            <select class="flex1" name="timeout" placeholder="timeout">
+                                <option></option>
+                                <option>5000</option>
+                                <option>15000</option>
+                                <option>30000</option>
+                            </select></label>
+                        <label><span>excludeCredentials</span>
+                            <select class="flex1" name="excludeCredentials" placeholder="excludeCredentials">
+                                <option></option>
+                                <option>All</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>authenticatorSelection.authenticatorAttachment</span>
+                            <select class="flex1" name="authenticatorSelection.authenticatorAttachment"
+                                placeholder="authenticatorSelection.authenticatorAttachment">
+                                <option></option>
+                                <option>platform</option>
+                                <option>cross-platform</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>authenticatorSelection.residentKey</span>
+                            <select class="flex1" name="authenticatorSelection.residentKey"
+                                placeholder="authenticatorSelection.residentKey">
+                                <option></option>
+                                <option>discouraged</option>
+                                <option>preferred</option>
+                                <option>required</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>authenticatorSelection.userVerification</span>
+                            <select class="flex1" name="authenticatorSelection.userVerification"
+                                placeholder="authenticatorSelection.userVerification">
+                                <option></option>
+                                <option>required</option>
+                                <option>preferred</option>
+                                <option>discouraged</option>
+                            </select>
+                        </label><label><span>attestation</span>
+                            <select class="flex1" name="attestation" placeholder="attestation">
+                                <option></option>
+                                <option>none</option>
+                                <option>indirect</option>
+                                <option>direct</option>
+                                <option>enterprise</option>
+                            </select>
+                        </label>
+                        <div>
+                            <button type="submit">Create</button>
+                            <button type="reset">Reset</button>
+                        </div>
+                    </form>
+                </section>
+            </section>
+        </section>
+    </main>
+
+</body>
+
+</html>
