@@ -65,12 +65,16 @@
             }
         }
 
+        const invalidArgument = () => { throw new Error("invalid argument"); }
         const isNull = value => value === null || value === undefined;
         const notNull = value => value !== null && value !== undefined;
+        const assertNotNull = value => notNull() || invalidArgument();
         const isEmpty = value => isNull(value) || value === "";
+        const isFunction = value => isNull(value) || (typeof value === "function");
+        const assertFunction = value => isFunction() || invalidArgument();
         const notEmpty = value => notNull(value) && value !== "";
-        const ifNotNull = value => notNull(value) ? value : undefined;
-        const ifNotEmpty = value => notEmpty(value) ? value : undefined;
+        const ifNotNull = (value, func) => notNull(value) ? (notNull(func) && assertFunction(func) ? func(value) : value) : undefined;
+        const ifNotEmpty = (value, func) => notEmpty(value) ? (notNull(func) && assertFunction(func) ? func(value) : value) : undefined;
 
         async function initPublicKeyCredentialCreationOptions() {
             await parsed;
@@ -98,11 +102,11 @@
                 const json = JSON.stringify(o, replacer, 2);
                 form["CredentialCreationOptions"].value = json;
                 const response = document.getElementById("AuthenticatorAttestationResponse");
-                response.querySelector(":scope > input[type='checkbox']").checked = false;
                 const out = response.querySelector("form");
                 out.reset();
                 try {
                     const attestation_response = new WebAuthn.PublicKeyCredential(await navigator.credentials.create(o));
+                    response.querySelector(":scope > input[type='checkbox']").checked = false;
                     out["PublicKeyCredential"].value = JSON.stringify(attestation_response.toJson(), replacer, 2);
                     out["PublicKeyCredential"].classList.remove("error");
                     const clientDataJSON = Decoder.decodeClientDataJSON(attestation_response.response.clientDataJSON);
@@ -114,6 +118,7 @@
                     out["credentialPublicKey"].value = JSON.stringify(authData.attestedCredentialData.credentialPublicKey, replacer, 2);
                     section.querySelector(":scope > input[type='checkbox']").checked = true;
                 } catch (error) {
+                    response.querySelector(":scope > input[type='checkbox']").checked = false;
                     out["PublicKeyCredential"].value = error.toString();
                     out["PublicKeyCredential"].classList.add("error");
                 }
@@ -136,8 +141,8 @@
                 WebAuthn.PublicKeyCredentialParameters.publicKey(-7),
                 WebAuthn.PublicKeyCredentialParameters.publicKey(-257),
             ];
-            publicKey.timeout = notEmpty(form["timeout"].value) ? Number(form["timeout"].value) : undefined;
-            publicKey.excludeCredentials = [];
+            publicKey.timeout = ifNotEmpty(form["timeout"].value, Number);
+            publicKey.excludeCredentials = []; // TODO
             publicKey.authenticatorSelection.authenticatorAttachment = ifNotEmpty(form["authenticatorSelection.authenticatorAttachment"].value);;
             publicKey.authenticatorSelection.residentKey = ifNotEmpty(form["authenticatorSelection.residentKey"].value);;
             publicKey.authenticatorSelection.userVerification = ifNotEmpty(form["authenticatorSelection.userVerification"].value);;
