@@ -1,40 +1,40 @@
 import { encodeArray } from "./base64.js";
 
 export function coseToJwk(data) {
-    let alg, crv;
-    switch (data[1]) {
-        case 2: // EC
-            switch (data[3]) {
-                case -7: alg = "ES256"; break;
-                default: throw new Error("invalid argument");
-            }
-            switch (data[-1]) {
-                case 1: crv = "P-256"; break;
-                default: throw new Error("invalid argument");
-            }
-            if (!data[-2] || !data[-3]) throw new Error("invalid argument");
-            return {
-                "kty": "EC",
-                "alg": alg,
-                "crv": crv,
-                "x": encodeArray(data[-2]),
-                "y": encodeArray(data[-3]),
-            };
-        case 3: // RSA
-            switch (data[3]) {
-                case -37: alg = "PS256"; break;
-                case -257: alg = "RS256"; break;
-                default: throw new Error("invalid argument");
-            }
-            if (!data[-1] || !data[-2]) throw new Error("invalid argument");
-            return {
-                "kty": "RSA",
-                "alg": alg,
-                "n": encodeArray(data[-1]),
-                "e": encodeArray(data[-2]),
-            };
-        default: throw new Error("invalid argument");
-    }
+	let alg, crv;
+	switch (data[1]) {
+		case 2: // EC
+			switch (data[3]) {
+				case -7: alg = "ES256"; break;
+				default: throw new Error("invalid argument");
+			}
+			switch (data[-1]) {
+				case 1: crv = "P-256"; break;
+				default: throw new Error("invalid argument");
+			}
+			if (!data[-2] || !data[-3]) throw new Error("invalid argument");
+			return {
+				"kty": "EC",
+				"alg": alg,
+				"crv": crv,
+				"x": encodeArray(data[-2]),
+				"y": encodeArray(data[-3]),
+			};
+		case 3: // RSA
+			switch (data[3]) {
+				case -37: alg = "PS256"; break;
+				case -257: alg = "RS256"; break;
+				default: throw new Error("invalid argument");
+			}
+			if (!data[-1] || !data[-2]) throw new Error("invalid argument");
+			return {
+				"kty": "RSA",
+				"alg": alg,
+				"n": encodeArray(data[-1]),
+				"e": encodeArray(data[-2]),
+			};
+		default: throw new Error("invalid argument");
+	}
 }
 
 export function getAlgorithm(jwk, alg) {
@@ -112,4 +112,10 @@ export async function importJWK(jwk, alg) {
 
 export async function sha256(data) {
 	return await crypto.subtle.digest("SHA-256", data);
+}
+
+export function getRandomBytes(length) {
+	var array = new Uint8Array(length ?? 32);
+	crypto.getRandomValues(array);
+	return array;
 }

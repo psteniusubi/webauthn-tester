@@ -78,6 +78,12 @@ export class PublicKeyCredentialDescriptor {
             transports: this.transports ?? undefined,
         }
     }
+    static publicKey(id) {
+        return new PublicKeyCredentialDescriptor({
+            type: "public-key",
+            id: id,
+        })
+    }
 }
 
 export class AuthenticatorSelectionCriteria {

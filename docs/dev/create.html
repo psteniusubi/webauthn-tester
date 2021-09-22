@@ -41,7 +41,8 @@
         import { create_repository_menu, set_button_href_handlers } from "../../assets/common/modules/helper-module.js";
         import * as WebAuthn from "./assets/local/modules/WebAuthnTypes.js";
         import * as Decoder from "./assets/local/modules/WebAuthnDecoder.js";
-        import { atobUrlSafe, btoaUrlSafe } from "../../oidc-tester/assets/common/modules/base64url.js";
+        import { atobUrlSafe, btoaUrlSafe } from "./assets/local/modules/base64.js";
+        import { getRandomBytes } from "./assets/local/modules/Crypto.js";
         async function build_page() {
             await parsed;
             await create_repository_menu();
@@ -136,7 +137,7 @@
             publicKey.rp.id = ifNotEmpty(form["rp.id"].value);
             publicKey.user.name = ifNotEmpty(form["user.name"].value);
             publicKey.user.displayName = ifNotEmpty(form["user.displayName"].value);
-            publicKey.challenge = new ArrayBuffer(20);
+            publicKey.challenge = getRandomBytes(20);
             publicKey.pubKeyCredParams = [
                 WebAuthn.PublicKeyCredentialParameters.publicKey(-7),
                 WebAuthn.PublicKeyCredentialParameters.publicKey(-257),

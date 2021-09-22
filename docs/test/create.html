@@ -11,6 +11,7 @@
         import { decodeArray, encodeArray } from "../dev/assets/local/modules/base64.js";
         import * as WebAuthn from "../dev/assets/local/modules/WebAuthnTypes.js";
         import * as Decoder from "../dev/assets/local/modules/WebAuthnDecoder.js";
+        import { getRandomBytes } from "../dev/assets/local/modules/Crypto.js";
         function replacer(k, v) {
             if (v instanceof ArrayBuffer) {
                 return replacer(k, new Uint8Array(v));
@@ -23,45 +24,6 @@
         const ifNotNull = (value, func) => (value === null || value === undefined)
             ? undefined
             : func(value);
-        async function create_and_get(create, get) {
-            const attestation_response = new WebAuthn.PublicKeyCredential();
-            attestation_response.id = create.id;
-            attestation_response.type = create.type;
-            attestation_response.rawId = ifNotNull(create.rawId, decodeArray);
-            attestation_response.response = new WebAuthn.AuthenticatorAttestationResponse();
-            attestation_response.response.clientDataJSON = ifNotNull(create.response.clientDataJSON, decodeArray);
-            attestation_response.response.attestationObject = ifNotNull(create.response.attestationObject, decodeArray);
-            console.log(JSON.stringify(attestation_response, replacer, 2));
-
-            const attestation_clientDataJSON = Decoder.decodeClientDataJSON(attestation_response.response.clientDataJSON);
-            console.log(JSON.stringify(attestation_clientDataJSON, replacer, 2));
-
-            const attestationObject = Decoder.decodeAttestationObject(attestation_response.response.attestationObject);
-            console.log(JSON.stringify(attestationObject, replacer, 2));
-
-            const authDataCreate = Decoder.decodeAuthenticatorData(attestationObject.authData);
-            console.log(JSON.stringify(authDataCreate.toJson(), replacer, 2));
-
-            const assertion_response = new WebAuthn.PublicKeyCredential();
-            assertion_response.id = get.id;
-            assertion_response.type = get.type;
-            assertion_response.rawId = ifNotNull(get.rawId, decodeArray);
-            assertion_response.response = new WebAuthn.AuthenticatorAssertionResponse();
-            assertion_response.response.clientDataJSON = ifNotNull(get.response.clientDataJSON, decodeArray);
-            assertion_response.response.authenticatorData = ifNotNull(get.response.authenticatorData, decodeArray);
-            assertion_response.response.signature = ifNotNull(get.response.signature, decodeArray);
-            assertion_response.response.userHandle = ifNotNull(get.response.userHandle, decodeArray);
-            console.log(JSON.stringify(attestation_response, replacer, 2));
-
-            const assertion_clientDataJSON = Decoder.decodeClientDataJSON(assertion_response.response.clientDataJSON);
-            console.log(JSON.stringify(assertion_clientDataJSON, replacer, 2));
-
-            const authDataGet = Decoder.decodeAuthenticatorData(assertion_response.response.authenticatorData);
-            console.log(JSON.stringify(authDataGet.toJson(), replacer, 2));
-
-            const valid = await Decoder.verifyAssertionSignature(assertion_response, authDataCreate.attestedCredentialData.credentialPublicKey);
-            assert.assertTrue(valid);
-        }
         class CredentialCreationTests {
             testEmpty1() {
                 const options = new WebAuthn.CredentialCreationOptions();
@@ -82,7 +44,7 @@
                 creation.publicKey.rp.name = location.origin;
                 creation.publicKey.user.name = "hello@example.com";
                 creation.publicKey.user.displayName = "Hello Example";
-                creation.publicKey.challenge = new ArrayBuffer(20);
+                creation.publicKey.challenge = getRandomBytes(20);
                 creation.publicKey.pubKeyCredParams = [
                     WebAuthn.PublicKeyCredentialParameters.publicKey(-7),
                     WebAuthn.PublicKeyCredentialParameters.publicKey(-257),
@@ -104,9 +66,9 @@
                 console.log(JSON.stringify(authData.toJson(), replacer, 2));
 
                 const request = new WebAuthn.CredentialRequestOptions();
-                request.publicKey.challenge = new ArrayBuffer(20);
+                request.publicKey.challenge = getRandomBytes(20);
                 request.publicKey.allowCredentials = [
-                    new WebAuthn.PublicKeyCredentialDescriptor({ type: "public-key", id: attestation_response.rawId })
+                    WebAuthn.PublicKeyCredentialDescriptor.publicKey(attestation_response.rawId)
                 ];
                 json = request.toJson();
                 console.log(JSON.stringify(json, replacer, 2));
@@ -119,13 +81,13 @@
                 const credentialPublicKey = {
                     "kty": "RSA",
                     "alg": "RS256",
-                    "n": "sf9ATw0njVOXa9gJpNCZu7Xh6pWRbbJJ-yFokeTesvb3anJMDaHHauOZZxHdwaXPuWJ5IQNiRBDl1PN8cYWZcnV3hL06f63Vo7oC_qksB6KNh4yp8Pg5DAKJSzVC-J85tXVqqHtsHXP-fAiyMS4kWr2C1LXw1fWN8Jkq91-lLC6_bKqhN6caDoTOccyVI2FXAKBBpJatx5J11CjeoXZcEo5fcswAAI32getxEAA5q29OoAY2-aYzG1zdUwMPTb5s0F_8vz_kHaHR40XEQaMNh2JeqQ6QvCRcX7HKEv0RiMO8VyoVrSC_68Sv69JmjAYV9Ld0olh-wOE2-vvOHtEcNQ",
+                    "n": "t_fiZZ9fmkoLGlymGG380_lx2wCKYHi0ojpUEV3hdhJG3uaw9cc7-aP6pIxQVAQM0QcGm8xWnnPL7uq-w2XZ9KvffOxSbMp1vYL0L7JxmSLdzryyjjXDogPGyFHHTkiEwODN4kxJnoxP3aJZ1kfCsgTO0m5UhjBOvyQwJLIBNWo7gUi8Ty76qRfaH6nPnZ3ENY0zVJTfY2AKpoKY5297v5KDAP19bqXYRZ4qHSiCkA3UHL-SjHMhX3NVC7my9IimojadG-16M9-uBvNQrPzVe7471Bv9PX9NYddJ1-uU6zP7bOAhwN0heahzJrocSFjzFvVHhotDYhc97cHrigv7FQ",
                     "e": "AQAB"
                 };
                 const request = new WebAuthn.CredentialRequestOptions();
-                request.publicKey.challenge = new ArrayBuffer(20);
+                request.publicKey.challenge = getRandomBytes(20);
                 request.publicKey.allowCredentials = [
-                    new WebAuthn.PublicKeyCredentialDescriptor({ type: "public-key", id: decodeArray("ETY21VITSWh8miyNH4J9Ll7umCzcpHQGuJ-9R8rnlzc") })
+                    WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray("gs67mmLsNRvYz7w1p0Wr1UMYZcM8VvW4SYHN5Y6FE3c"))
                 ];
                 let json = request.toJson();
                 console.log(JSON.stringify(json, replacer, 2));
@@ -141,85 +103,6 @@
 
                 const valid = await Decoder.verifyAssertionSignature(assertion_response, credentialPublicKey);
                 assert.assertTrue(valid);
-            }
-            testDecodeAuthenticatorAttestationResponse1() {
-                const create = {
-                    "id": "_0a1HfMC4dfh5v5m7Qvw7MfQaeu7YH-npm5Uxx4Q0Qg",
-                    "type": "public-key",
-                    "rawId": "_0a1HfMC4dfh5v5m7Qvw7MfQaeu7YH-npm5Uxx4Q0Qg",
-                    "response": {
-                        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiUG50WnNvc0dJSUNqdDdXZFFfX1JxcnBkZ1QtNnlfUEgyMkduSklOSFYxTSIsIm9yaWdpbiI6Imh0dHBzOi8vcHN0ZW5pdXN1YmkuZXhhbXBsZS5jb20iLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
-                        "attestationObject": "o2NmbXRmcGFja2VkZ2F0dFN0bXSjY2FsZyZjc2lnWEgwRgIhAK3aML0_ncEPG-QHjqT-rAfWG_9vdcKQ1kD-D59bnvvCAiEA1374IVU10GBxnr3FRB1gVZh_UnUpwB_r2WlH3mSFP49jeDVjglkCRzCCAkMwggHooAMCAQICEB3ytVpR3EtohaPZnml_7RQwCgYIKoZIzj0EAwIwSTELMAkGA1UEBhMCVVMxHTAbBgNVBAoMFEZlaXRpYW4gVGVjaG5vbG9naWVzMRswGQYDVQQDDBJGZWl0aWFuIEZJRE8gQ0EgMDEwIBcNMTgwNjIxMDAwMDAwWhgPMjAzMzA2MjAyMzU5NTlaMG8xCzAJBgNVBAYTAlVTMR0wGwYDVQQKDBRGZWl0aWFuIFRlY2hub2xvZ2llczEiMCAGA1UECwwZQXV0aGVudGljYXRvciBBdHRlc3RhdGlvbjEdMBsGA1UEAwwURlQgQmlvUGFzcyBGSURPMiBVU0IwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARgUPhu4STZFoXVMyFB0S_uTZ4XXdsEgx5yrYpb_Q2Cz54NRWuxXYGorXVdbSw6J44FzxgeJ-m5dnRrmNa4rb9Co4GJMIGGMB0GA1UdDgQWBBQB8sK03Llee4Yf206ZylifN3sz9TAfBgNVHSMEGDAWgBR_7JT_SrkjYOgVW4y9O0VQVMccJDAMBgNVHRMBAf8EAjAAMBMGCysGAQQBguUcAgEBBAQDAgUgMCEGCysGAQQBguUcAQEEBBIEEHcBC9chKk_JsjbSyl6dQIQwCgYIKoZIzj0EAwIDSQAwRgIhAI0OP06xf6ivC2fB5DJpglJ3tLkCBOLiOpn-d331v_1tAiEA-98GDqD6y-4XiG3IGu35tZI0qfI81IXMC3amhLcLOWRZAf4wggH6MIIBoKADAgECAhAYFStBt0OubbQVmcOxfYIGMAoGCCqGSM49BAMCMEsxCzAJBgNVBAYTAlVTMR0wGwYDVQQKDBRGZWl0aWFuIFRlY2hub2xvZ2llczEdMBsGA1UEAwwURmVpdGlhbiBGSURPIFJvb3QgQ0EwIBcNMTgwNTIwMDAwMDAwWhgPMjAzODA1MTkyMzU5NTlaMEkxCzAJBgNVBAYTAlVTMR0wGwYDVQQKDBRGZWl0aWFuIFRlY2hub2xvZ2llczEbMBkGA1UEAwwSRmVpdGlhbiBGSURPIENBIDAxMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE-BagQ4LIURnsRNcV_bbGM6fYEp39MfNsKPC4cnkok7lNuqf_v-BhNSysXmhyKDEzDnIaQghT8GAcKMahrKFbO6NmMGQwHQYDVR0OBBYEFH_slP9KuSNg6BVbjL07RVBUxxwkMB8GA1UdIwQYMBaAFEu9hyYRrRyJzwRYvnDSCIxrFiO3MBIGA1UdEwEB_wQIMAYBAf8CAQAwDgYDVR0PAQH_BAQDAgEGMAoGCCqGSM49BAMCA0gAMEUCIQDWn-V27zOcFhV44Gha29anL_wIXehZBh6MpDiVZjUXgwIgHecML49qGF1OxJUBrTOJIEzQw6J5gCjkrYYvw8elZxRoYXV0aERhdGFYssQdNiBAO_caxS22hvLnXNj6HRMX5rwuStImQoKX4H00xQAAGh13AQvXISpPybI20spenUCEACD_RrUd8wLh1-Hm_mbtC_Dsx9Bp67tgf6emblTHHhDRCKUBAgMmIAEhWCAQ5e8laksVIv-TUqRjFvfGwiDQ208iJYLKpM24qkHG-CJYILHpFG53jbdX8xnyGiolzLOmWTTKvvucW-ZJNnPKXXRuoWtjcmVkUHJvdGVjdAI"
-                    }
-                };
-
-                const response = new WebAuthn.PublicKeyCredential();
-                response.id = create.id;
-                response.type = create.type;
-                response.rawId = decodeArray(create.rawId);
-                response.response = new WebAuthn.AuthenticatorAttestationResponse();
-                response.response.clientDataJSON = decodeArray(create.response.clientDataJSON);
-                response.response.attestationObject = decodeArray(create.response.attestationObject);
-                console.log(JSON.stringify(response, replacer, 2));
-
-                const clientDataJSON = Decoder.decodeClientDataJSON(response.response.clientDataJSON);
-                console.log(JSON.stringify(clientDataJSON, replacer, 2));
-
-                const attestationObject = Decoder.decodeAttestationObject(response.response.attestationObject);
-                console.log(JSON.stringify(attestationObject, replacer, 2));
-
-                const authData = Decoder.decodeAuthenticatorData(attestationObject.authData);
-                console.log(JSON.stringify(authData.toJson(), replacer, 2));
-            }
-            async testCreateAndGet1() {
-                const create = {
-                    "id": "ZR2K8-8IL3grLDHmvTe7fUG303IXNbKhG6N3CZIWC18",
-                    "type": "public-key",
-                    "rawId": "ZR2K8-8IL3grLDHmvTe7fUG303IXNbKhG6N3CZIWC18",
-                    "response": {
-                        "clientDataJSON": "ew0KCSJ0eXBlIiA6ICJ3ZWJhdXRobi5jcmVhdGUiLA0KCSJjaGFsbGVuZ2UiIDogIjAzVFRGdW85WWg1T2hCa0E4eHRrYXZ2RUZzWFpJcFJvOWJudlJRZFU5VTQiLA0KCSJvcmlnaW4iIDogImh0dHBzOi8vcHN0ZW5pdXN1YmkuZXhhbXBsZS5jb20iLA0KCSJ0b2tlbkJpbmRpbmciIDogDQoJew0KCQkic3RhdHVzIiA6ICJzdXBwb3J0ZWQiDQoJfQ0KfQ",
-                        "attestationObject": "o2NmbXRkbm9uZWhhdXRoRGF0YVkBZ8QdNiBAO_caxS22hvLnXNj6HRMX5rwuStImQoKX4H00RQAAAAAImHBYytxLgbbhMN5Q3L6WACBlHYrz7wgveCssMea9N7t9QbfTchc1sqEbo3cJkhYLX6QBAwM5AQAgWQEA58Opass67iD4M5wD27WQdYs_pjpiyg4UyTMuGmZQII9s8cIAmzLQOJ2ATUY6x_r6FerWkNM7yqv37NXDDrc4wAi2H64O1r15ubBoSX8mrkVSdfadvaA2AF0byPOyPXZBK6zOyUNU_XJSB36IWwt8kJ798oVwQ0RHPPN3wEPT9c-bARZ7KRvF_roxOStQgGTcp5xdd_HELrH5dgwJKaDZUdOZ5C5lj8GvmbbHmc2tSdBWQJEycf17w6qSS16uOGG6vRq3vdeBdf4fNmkJTPtznI77WepeuOwxp97dMhsfZZFzafEK3dBBbBLH443J80ZIC2-9pHZKIAWOAzudCpEIYyFDAQABZ2F0dFN0bXSg"
-                    }
-                };
-
-                const get = {
-                    "id": "ZR2K8-8IL3grLDHmvTe7fUG303IXNbKhG6N3CZIWC18",
-                    "type": "public-key",
-                    "rawId": "ZR2K8-8IL3grLDHmvTe7fUG303IXNbKhG6N3CZIWC18",
-                    "response": {
-                        "clientDataJSON": "ew0KCSJ0eXBlIiA6ICJ3ZWJhdXRobi5nZXQiLA0KCSJjaGFsbGVuZ2UiIDogIk44VDl6X3BTLTU3YkUxMUZYd1VaN1k3LWNfeEktbW1xc0N2ZHFYZWtmc1kiLA0KCSJvcmlnaW4iIDogImh0dHBzOi8vcHN0ZW5pdXN1YmkuZXhhbXBsZS5jb20iLA0KCSJ0b2tlbkJpbmRpbmciIDogDQoJew0KCQkic3RhdHVzIiA6ICJzdXBwb3J0ZWQiDQoJfQ0KfQ",
-                        "authenticatorData": "xB02IEA79xrFLbaG8udc2PodExfmvC5K0iZCgpfgfTQFAAAAAQ",
-                        "signature": "vAali2_t4XTdtiAkw6Nu8sqM0_uKFYh4F-ROyeC2mD7ZSbZ4pmGrfmIqVrDUjzYXE2XEx9dp-ncqq1nbv78yvGEgXwZf-RWJq6cjieIXM0eD1qUbgQSsByxb86ABu1IKn4LU8HL99LvEezoN6r3Sjfxr2wuNFNieh_M4BvuBvHJrx1RtBq0pCMUfi0TbQwSrb_kxmpMf587g3ALk-qFfigTD2WAvIylt9t7_9-sDHCYIniMJLxHTrkleC9-t-V1rfrzluSipQMWskPyQ7CPXUdABtsCibv52UphTomZkyA0XmpL5UuPzqdyIy3KDSzEL3ExWs6bRHhd_mXb3YSmI1A",
-                        "userHandle": "aGVsbG9AZXhhbXBsZS5jb20"
-                    }
-                };
-
-                await create_and_get(create, get);
-            }
-            async testCreateAndGet2() {
-                const create = {
-                    "id": "VyUkqXpYc0hQxxgx-HSYNbFKzPaeEzZ-l4xIEyDZtbF-hLCFEuJYkx9x2IspOQ6qceRZByvDYMs2rpTxE_6wawMGt6g_4XOUO5nxmUwURnY",
-                    "type": "public-key",
-                    "rawId": "VyUkqXpYc0hQxxgx-HSYNbFKzPaeEzZ-l4xIEyDZtbF-hLCFEuJYkx9x2IspOQ6qceRZByvDYMs2rpTxE_6wawMGt6g_4XOUO5nxmUwURnY",
-                    "response": {
-                        "clientDataJSON": "ew0KCSJ0eXBlIiA6ICJ3ZWJhdXRobi5jcmVhdGUiLA0KCSJjaGFsbGVuZ2UiIDogIm5aQ0ZKU09TU0xXSmt5UkRMVjdwYXBiMTJjckozMjZZUV9GdFNwSnRrVmciLA0KCSJvcmlnaW4iIDogImh0dHBzOi8vcHN0ZW5pdXN1YmkuZXhhbXBsZS5jb20iLA0KCSJ0b2tlbkJpbmRpbmciIDogDQoJew0KCQkic3RhdHVzIiA6ICJzdXBwb3J0ZWQiDQoJfQ0KfQ",
-                        "attestationObject": "o2NmbXRoZmlkby11MmZoYXV0aERhdGFY1MQdNiBAO_caxS22hvLnXNj6HRMX5rwuStImQoKX4H00QQAAAAAAAAAAAAAAAAAAAAAAAAAAAFBXJSSpelhzSFDHGDH4dJg1sUrM9p4TNn6XjEgTINm1sX6EsIUS4liTH3HYiyk5Dqpx5FkHK8NgyzaulPET_rBrAwa3qD_hc5Q7mfGZTBRGdqUBAgMmIAEhWCDEg4W0aFfzDpATrnegDHtfp5D6EVV1zNIclu19tl3BDCJYIJkDjckCuR0EDW4gNbfsjrbsYesRIAGa6pecH7MKBKCLZ2F0dFN0bXSiY3NpZ1hHMEUCIBvVSNTbJ4exxNyEwq5l-1STINwzMJf23CPeu7G8BwKNAiEAxX5IQr_3QiC0MhsZ3b4oJaznuKAycoFEPQksw2W2GLBjeDVjgVkBWTCCAVUwgf2gAwIBAgIKlDiJVFiChUiWYTAKBggqhkjOPQQDAjAXMRUwEwYDVQQDEwxGVCBGSURPIDAxMDAwHhcNMTQwODE0MTgyOTMyWhcNMjQwODE0MTgyOTMyWjAxMS8wLQYDVQQDEyZVMkYgU2VjdXJpdHkgS2V5LS05NDM4ODk1NDU4ODI4NTQ4OTY2MTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABDePe8364ijNP3Fag3encVSiz76Drl5HX6CWf2SxgX5Qykhp2T0_grFN4V_q83GUOdQ7R4dpX1p4JVcLyJnGt6ajFzAVMBMGCysGAQQBguUcAgEBBAQDAgQgMAoGCCqGSM49BAMCA0cAMEQCIGX8rjQun9dtNVdtn5WgwVpyore8G6Hek-P4asrOnLyaAiBlWTo3ctovIFoVkYE88a0vI4Qw2o3Y4OezCagJctpQBA"
-                    }
-                };
-
-                const get = {
-                    "id": "VyUkqXpYc0hQxxgx-HSYNbFKzPaeEzZ-l4xIEyDZtbF-hLCFEuJYkx9x2IspOQ6qceRZByvDYMs2rpTxE_6wawMGt6g_4XOUO5nxmUwURnY",
-                    "type": "public-key",
-                    "rawId": "VyUkqXpYc0hQxxgx-HSYNbFKzPaeEzZ-l4xIEyDZtbF-hLCFEuJYkx9x2IspOQ6qceRZByvDYMs2rpTxE_6wawMGt6g_4XOUO5nxmUwURnY",
-                    "response": {
-                        "clientDataJSON": "ew0KCSJ0eXBlIiA6ICJ3ZWJhdXRobi5nZXQiLA0KCSJjaGFsbGVuZ2UiIDogImF2SUNpVVlaRFpIS0hOVDlUQUJZcmFhQjhyZlFoUW1ZOXMzVDRiNm1xcVkiLA0KCSJvcmlnaW4iIDogImh0dHBzOi8vcHN0ZW5pdXN1YmkuZXhhbXBsZS5jb20iLA0KCSJ0b2tlbkJpbmRpbmciIDogDQoJew0KCQkic3RhdHVzIiA6ICJzdXBwb3J0ZWQiDQoJfQ0KfQ",
-                        "authenticatorData": "xB02IEA79xrFLbaG8udc2PodExfmvC5K0iZCgpfgfTQBAAAAUA",
-                        "signature": "MEQCIHbIE3oZ0qumWDc9Z2mae09yfYNyBd0gk41vq6EU6DMwAiBIPNTI4HngkZGKBo7XUpemuvEmNe54OEPpPcrPnlLXvg",
-                        "userHandle": null
-                    }
-                };
-
-                await create_and_get(create, get);
             }
         }
         describeClass(CredentialCreationTests);
