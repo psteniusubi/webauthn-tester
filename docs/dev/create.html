@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Create credential</title>
+    <title>WebAuthn Create Credential</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <link rel="icon" href="../../assets/common/images/favicon.png" referrerpolicy="no-referrer" />
@@ -13,18 +13,41 @@
             --font-size: 12pt;
             --grid-main-area-width: minmax(auto, 72em);
         }
+
+        section>form :is(input, select):invalid,
+        section>form .error {
+            outline: 2px solid salmon;
+            outline-offset: -2px;
+        }
+
+        section.collapsed>h2>label,
+        section.collapsed>h3>label {
+            cursor: pointer;
+        }
+
+        section>form textarea {
+            white-space: pre;
+            word-wrap: normal;
+            word-break: normal;
+            overflow-x: hidden;
+            overflow-y: scroll;
+            font-family: monospace;
+            resize: vertical;
+            height: 10em;
+        }
     </style>
     <script type="module">
         import { parsed } from "../../assets/common/modules/document-promises.js";
         import { create_repository_menu, set_button_href_handlers } from "../../assets/common/modules/helper-module.js";
         import * as WebAuthn from "./assets/local/modules/WebAuthnTypes.js";
+        import * as Decoder from "./assets/local/modules/WebAuthnDecoder.js";
         import { atobUrlSafe, btoaUrlSafe } from "../../oidc-tester/assets/common/modules/base64url.js";
         async function build_page() {
             await parsed;
             await create_repository_menu();
             await set_button_href_handlers();
             await isUserVerifyingPlatformAuthenticatorAvailable();
-            await buildPublicKeyCredentialCreationOptions();
+            await initPublicKeyCredentialCreationOptions();
         }
         build_page();
 
@@ -40,6 +63,98 @@
                 input.value = error.toString();
                 input.classList.add("error");
             }
+        }
+
+        const isNull = value => value === null || value === undefined;
+        const notNull = value => value !== null && value !== undefined;
+        const isEmpty = value => isNull(value) || value === "";
+        const notEmpty = value => notNull(value) && value !== "";
+        const ifNotNull = value => notNull(value) ? value : undefined;
+        const ifNotEmpty = value => notEmpty(value) ? value : undefined;
+
+        async function initPublicKeyCredentialCreationOptions() {
+            await parsed;
+            document.getElementById("_origin").innerText = location.origin;
+            document.getElementById("_host").innerText = location.host;
+            const section = document.getElementById("PublicKeyCredentialCreationOptions");
+            const form = section.querySelector("form");
+            form.addEventListener("input", async e => {
+                const options = await createPublicKeyCredentialCreationOptions();
+                const o = options.toJson();
+                const json = JSON.stringify(o, replacer, 2);
+                form["CredentialCreationOptions"].value = json;
+            });
+            form.addEventListener("reset", async e => {
+                const response = document.getElementById("AuthenticatorAttestationResponse");
+                response.querySelector(":scope > input[type='checkbox']").checked = true;
+                response.querySelector("form").reset();
+                response.querySelectorAll(".error").forEach(t => t.classList.remove("error"));
+                form.dispatchEvent(new InputEvent("input"));
+            });
+            form.addEventListener("submit", async e => {
+                e.preventDefault();
+                const options = await createPublicKeyCredentialCreationOptions();
+                const o = options.toJson();
+                const json = JSON.stringify(o, replacer, 2);
+                form["CredentialCreationOptions"].value = json;
+                const response = document.getElementById("AuthenticatorAttestationResponse");
+                response.querySelector(":scope > input[type='checkbox']").checked = false;
+                const out = response.querySelector("form");
+                out.reset();
+                try {
+                    const attestation_response = new WebAuthn.PublicKeyCredential(await navigator.credentials.create(o));
+                    out["PublicKeyCredential"].value = JSON.stringify(attestation_response.toJson(), replacer, 2);
+                    out["PublicKeyCredential"].classList.remove("error");
+                    const clientDataJSON = Decoder.decodeClientDataJSON(attestation_response.response.clientDataJSON);
+                    out["clientDataJSON"].value = JSON.stringify(clientDataJSON, replacer, 2);
+                    const attestationObject = Decoder.decodeAttestationObject(attestation_response.response.attestationObject);
+                    out["attestationObject"].value = JSON.stringify(attestationObject, replacer, 2);
+                    const authData = Decoder.decodeAuthenticatorData(attestationObject.authData);
+                    out["authData"].value = JSON.stringify(authData.toJson(), replacer, 2);
+                    out["credentialPublicKey"].value = JSON.stringify(authData.attestedCredentialData.credentialPublicKey, replacer, 2);
+                    section.querySelector(":scope > input[type='checkbox']").checked = true;
+                } catch (error) {
+                    out["PublicKeyCredential"].value = error.toString();
+                    out["PublicKeyCredential"].classList.add("error");
+                }
+            })
+            form.dispatchEvent(new InputEvent("input"));
+            section.querySelector(":scope > input[type='checkbox']").checked = false;
+        }
+
+        async function createPublicKeyCredentialCreationOptions() {
+            await parsed;
+            const section = document.getElementById("PublicKeyCredentialCreationOptions");
+            const form = section.querySelector("form");
+            const publicKey = new WebAuthn.PublicKeyCredentialCreationOptions();
+            publicKey.rp.name = ifNotEmpty(form["rp.name"].value);
+            publicKey.rp.id = ifNotEmpty(form["rp.id"].value);
+            publicKey.user.name = ifNotEmpty(form["user.name"].value);
+            publicKey.user.displayName = ifNotEmpty(form["user.displayName"].value);
+            publicKey.challenge = new ArrayBuffer(20);
+            publicKey.pubKeyCredParams = [
+                WebAuthn.PublicKeyCredentialParameters.publicKey(-7),
+                WebAuthn.PublicKeyCredentialParameters.publicKey(-257),
+            ];
+            publicKey.timeout = notEmpty(form["timeout"].value) ? Number(form["timeout"].value) : undefined;
+            publicKey.excludeCredentials = [];
+            publicKey.authenticatorSelection.authenticatorAttachment = ifNotEmpty(form["authenticatorSelection.authenticatorAttachment"].value);;
+            publicKey.authenticatorSelection.residentKey = ifNotEmpty(form["authenticatorSelection.residentKey"].value);;
+            publicKey.authenticatorSelection.userVerification = ifNotEmpty(form["authenticatorSelection.userVerification"].value);;
+            publicKey.attestation = ifNotEmpty(form["attestation"].value);
+            const options = new WebAuthn.CredentialCreationOptions();
+            options.publicKey = publicKey;
+            return options;
+        }
+
+        function replacer(k, v) {
+            if (v instanceof ArrayBuffer) {
+                return replacer(k, new Uint8Array(v));
+            }
+            if (v instanceof Uint8Array) {
+                return btoaUrlSafe(Array.from(v, t => String.fromCharCode(t)).join(""));
+            }
+            return v;
         }
 
         function createProperties(parent, before, property) {
@@ -77,61 +192,6 @@
                 throw Error("invalid argument");
             }
             parent.insertBefore(label, before);
-        }
-
-        const isNull = value => value === null || value === undefined;
-        const notNull = value => value !== null && value !== undefined;
-        const isEmpty = value => isNull(value) || value === "";
-        const notEmpty = value => notNull(value) && value !== "";
-        const ifNotNull = value => notNull(value) ? value : undefined;
-        const ifNotEmpty = value => notEmpty(value) ? value : undefined;
-
-        async function buildPublicKeyCredentialCreationOptions() {
-            await parsed;
-            document.getElementById("_origin").innerText = location.origin;
-            document.getElementById("_host").innerText = location.host;
-            const section = document.getElementById("PublicKeyCredentialCreationOptions");
-            const form = section.querySelector("form");
-            form.addEventListener("input", e => {
-            });
-            form.addEventListener("submit", async e => {
-                e.preventDefault();
-                const publicKey = new WebAuthn.PublicKeyCredentialCreationOptions();
-                publicKey.rp.name = ifNotEmpty(form["rp.name"].value);
-                publicKey.rp.id = ifNotEmpty(form["rp.id"].value);
-                publicKey.user.name = ifNotEmpty(form["user.name"].value);
-                publicKey.user.displayName = ifNotEmpty(form["user.displayName"].value);
-                publicKey.challenge = new ArrayBuffer(20);
-                publicKey.pubKeyCredParams = [
-                    new WebAuthn.PublicKeyCredentialParameters("public-key", -7),
-                    new WebAuthn.PublicKeyCredentialParameters("public-key", -257),
-                ];
-                publicKey.timeout = notEmpty(form["timeout"].value) ? Number(form["timeout"].value) : undefined;
-                publicKey.excludeCredentials = [];
-                publicKey.authenticatorSelection.authenticatorAttachment = ifNotEmpty(form["authenticatorSelection.authenticatorAttachment"].value);;
-                publicKey.authenticatorSelection.residentKey = ifNotEmpty(form["authenticatorSelection.residentKey"].value);;
-                publicKey.authenticatorSelection.userVerification = ifNotEmpty(form["authenticatorSelection.userVerification"].value);;
-                publicKey.attestation = ifNotEmpty(form["attestation"].value);
-                const options = new WebAuthn.CredentialCreationOptions();
-                options.publicKey = publicKey;
-                const o = options.toJson();
-                console.log(JSON.stringify(o, replacer, 2));
-                try {
-                    const cred = await navigator.credentials.create(o);
-                } catch (error) {
-                    console.error(error);
-                }
-            })
-        }
-
-        function replacer(k, v) {
-            if (v instanceof ArrayBuffer) {
-                return replacer(k, new Uint8Array(v));
-            }
-            if (v instanceof Uint8Array) {
-                return btoaUrlSafe(Array.from(v, t => String.fromCharCode(t)).join(""));
-            }
-            return v;
         }
 
         async function XX_buildPublicKeyCredentialCreationOptions() {
@@ -237,7 +297,7 @@
                     <form autocomplete="off" novalidate="">
                         <label>
                             <span>rp.name</span>
-                            <select class="flex1" name="rp.name" placeholder="rp.name">
+                            <select class="flex1" name="rp.name" placeholder="rp.name" required>
                                 <option></option>
                                 <option selected="selected" id="_origin"></option>
                                 <option>webauthn-tester</option>
@@ -253,12 +313,12 @@
                         <label>
                             <span>user.name</span>
                             <input class="flex1" type="text" name="user.name" placeholder="user.name"
-                                value="hello@example.com">
+                                value="hello@example.com" required>
                         </label>
                         <label>
                             <span>user.displayName</span>
                             <input class="flex1" type="text" name="user.displayName" placeholder="user.displayName"
-                                value="Hello Example">
+                                value="Hello Example" required>
                         </label>
                         <label>
                             <span>timeout</span>
@@ -302,7 +362,9 @@
                                 <option>preferred</option>
                                 <option>discouraged</option>
                             </select>
-                        </label><label><span>attestation</span>
+                        </label>
+                        <label>
+                            <span>attestation</span>
                             <select class="flex1" name="attestation" placeholder="attestation">
                                 <option></option>
                                 <option>none</option>
@@ -311,9 +373,46 @@
                                 <option>enterprise</option>
                             </select>
                         </label>
+                        <label>
+                            <textarea class="flex1" name="CredentialCreationOptions"
+                                placeholder="CredentialCreationOptions" readonly></textarea>
+                        </label>
                         <div>
                             <button type="submit">Create</button>
                             <button type="reset">Reset</button>
+                        </div>
+                    </form>
+                </section>
+            </section>
+            <section id="AuthenticatorAttestationResponse" class="collapsed">
+                <input type="checkbox" id="AuthenticatorAttestationResponse_hide" checked />
+                <h3><label for="AuthenticatorAttestationResponse_hide">AuthenticatorAttestationResponse</label></h3>
+                <section>
+                    <form autocomplete="off">
+                        <div><span>PublicKeyCredential</span></div>
+                        <div>
+                            <textarea class="flex1" name="PublicKeyCredential" placeholder="PublicKeyCredential"
+                                readonly></textarea>
+                        </div>
+                        <div><span>clientDataJSON</span></div>
+                        <div>
+                            <textarea class="flex1" name="clientDataJSON" placeholder="clientDataJSON"
+                                readonly></textarea>
+                        </div>
+
+                        <div><span>attestationObject</span></div>
+                        <div>
+                            <textarea class="flex1" name="attestationObject" placeholder="attestationObject"
+                                readonly></textarea>
+                        </div>
+                        <div><span>authData</span></div>
+                        <div>
+                            <textarea class="flex1" name="authData" placeholder="authData" readonly></textarea>
+                        </div>
+                        <div><span>credentialPublicKey</span></div>
+                        <div>
+                            <textarea class="flex1" name="credentialPublicKey" placeholder="credentialPublicKey"
+                                readonly></textarea>
                         </div>
                     </form>
                 </section>

@@ -40,7 +40,7 @@
             console.log(JSON.stringify(attestationObject, replacer, 2));
 
             const authDataCreate = Decoder.decodeAuthenticatorData(attestationObject.authData);
-            console.log(JSON.stringify(authDataCreate, replacer, 2));
+            console.log(JSON.stringify(authDataCreate.toJson(), replacer, 2));
 
             const assertion_response = new WebAuthn.PublicKeyCredential();
             assertion_response.id = get.id;
@@ -57,7 +57,7 @@
             console.log(JSON.stringify(assertion_clientDataJSON, replacer, 2));
 
             const authDataGet = Decoder.decodeAuthenticatorData(assertion_response.response.authenticatorData);
-            console.log(JSON.stringify(authDataGet, replacer, 2));
+            console.log(JSON.stringify(authDataGet.toJson(), replacer, 2));
 
             const valid = await Decoder.verifyAssertionSignature(assertion_response, authDataCreate.attestedCredentialData.credentialPublicKey);
             assert.assertTrue(valid);
@@ -78,18 +78,69 @@
                 console.log(JSON.stringify(json, replacer, 2));
             }
             async testMinimal1() {
-                const options = new WebAuthn.CredentialCreationOptions();
-                options.publicKey.rp.name = location.origin;
-                options.publicKey.user.name = "hello@example.com";
-                options.publicKey.user.displayName = "Hello Example";
-                options.publicKey.challenge = new ArrayBuffer(20);
-                options.publicKey.pubKeyCredParams = [
-                    new WebAuthn.PublicKeyCredentialParameters("public-key", -7),
-                    new WebAuthn.PublicKeyCredentialParameters("public-key", -257),
+                const creation = new WebAuthn.CredentialCreationOptions();
+                creation.publicKey.rp.name = location.origin;
+                creation.publicKey.user.name = "hello@example.com";
+                creation.publicKey.user.displayName = "Hello Example";
+                creation.publicKey.challenge = new ArrayBuffer(20);
+                creation.publicKey.pubKeyCredParams = [
+                    WebAuthn.PublicKeyCredentialParameters.publicKey(-7),
+                    WebAuthn.PublicKeyCredentialParameters.publicKey(-257),
                 ];
-                const json = options.toJson();
+                let json = creation.toJson();
                 console.log(JSON.stringify(json, replacer, 2));
-                await navigator.credentials.create(json);
+
+                const attestation_response = new WebAuthn.PublicKeyCredential(await navigator.credentials.create(json));
+                json = attestation_response.toJson();
+                console.log(JSON.stringify(json, replacer, 2));
+
+                const clientDataJSON = Decoder.decodeClientDataJSON(attestation_response.response.clientDataJSON);
+                console.log(JSON.stringify(clientDataJSON, replacer, 2));
+
+                const attestationObject = Decoder.decodeAttestationObject(attestation_response.response.attestationObject);
+                console.log(JSON.stringify(attestationObject, replacer, 2));
+
+                const authData = Decoder.decodeAuthenticatorData(attestationObject.authData);
+                console.log(JSON.stringify(authData.toJson(), replacer, 2));
+
+                const request = new WebAuthn.CredentialRequestOptions();
+                request.publicKey.challenge = new ArrayBuffer(20);
+                request.publicKey.allowCredentials = [
+                    new WebAuthn.PublicKeyCredentialDescriptor({ type: "public-key", id: attestation_response.rawId })
+                ];
+                json = request.toJson();
+                console.log(JSON.stringify(json, replacer, 2));
+
+                const assertion_response = new WebAuthn.PublicKeyCredential(await navigator.credentials.get(json));
+                json = assertion_response.toJson();
+                console.log(JSON.stringify(json, replacer, 2));
+            }
+            async testRequest1() {
+                const credentialPublicKey = {
+                    "kty": "RSA",
+                    "alg": "RS256",
+                    "n": "sf9ATw0njVOXa9gJpNCZu7Xh6pWRbbJJ-yFokeTesvb3anJMDaHHauOZZxHdwaXPuWJ5IQNiRBDl1PN8cYWZcnV3hL06f63Vo7oC_qksB6KNh4yp8Pg5DAKJSzVC-J85tXVqqHtsHXP-fAiyMS4kWr2C1LXw1fWN8Jkq91-lLC6_bKqhN6caDoTOccyVI2FXAKBBpJatx5J11CjeoXZcEo5fcswAAI32getxEAA5q29OoAY2-aYzG1zdUwMPTb5s0F_8vz_kHaHR40XEQaMNh2JeqQ6QvCRcX7HKEv0RiMO8VyoVrSC_68Sv69JmjAYV9Ld0olh-wOE2-vvOHtEcNQ",
+                    "e": "AQAB"
+                };
+                const request = new WebAuthn.CredentialRequestOptions();
+                request.publicKey.challenge = new ArrayBuffer(20);
+                request.publicKey.allowCredentials = [
+                    new WebAuthn.PublicKeyCredentialDescriptor({ type: "public-key", id: decodeArray("ETY21VITSWh8miyNH4J9Ll7umCzcpHQGuJ-9R8rnlzc") })
+                ];
+                let json = request.toJson();
+                console.log(JSON.stringify(json, replacer, 2));
+
+                const assertion_response = new WebAuthn.PublicKeyCredential(await navigator.credentials.get(json));
+                console.log(JSON.stringify(assertion_response.toJson(), replacer, 2));
+
+                const assertion_clientDataJSON = Decoder.decodeClientDataJSON(assertion_response.response.clientDataJSON);
+                console.log(JSON.stringify(assertion_clientDataJSON, replacer, 2));
+
+                const authDataGet = Decoder.decodeAuthenticatorData(assertion_response.response.authenticatorData);
+                console.log(JSON.stringify(authDataGet.toJson(), replacer, 2));
+
+                const valid = await Decoder.verifyAssertionSignature(assertion_response, credentialPublicKey);
+                assert.assertTrue(valid);
             }
             testDecodeAuthenticatorAttestationResponse1() {
                 const create = {
@@ -118,7 +169,7 @@
                 console.log(JSON.stringify(attestationObject, replacer, 2));
 
                 const authData = Decoder.decodeAuthenticatorData(attestationObject.authData);
-                console.log(JSON.stringify(authData, replacer, 2));
+                console.log(JSON.stringify(authData.toJson(), replacer, 2));
             }
             async testCreateAndGet1() {
                 const create = {
