@@ -2,11 +2,12 @@
 <html>
 
 <head>
-    <title>Edit credentials</title>
+    <title>Edit Credentials</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <link rel="icon" href="../../assets/common/images/favicon.png" referrerpolicy="no-referrer" />
-    <link rel="stylesheet" type="text/css" href="../../assets/common/styles/ubisecure.css" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" type="text/css" href="../../assets/common/styles/ubisecure.css"
+        referrerpolicy="no-referrer" />
     <style type="text/css">
         :root {
             --font-size: 12pt;
@@ -51,7 +52,39 @@
 
     <main>
         <section class="outline">
-            <h1>Edit Credentials</h1>
+            <h2>Edit Credentials</h2>
+            <section class="scroll">
+                <table class="hover select">
+                    <thead>
+                        <tr>
+                            <th>Instant</th>
+                            <th>User</th>
+                            <th>Id</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>2021-09-20T08:54:36.545Z</td>
+                            <td>hello@example.com (Hello Example)</td>
+                            <td>FaFobg7rVhN5BcKraGCzYBjJAPH6MTvtAhEW1zWEh0T0_jCtH61daSSPBO_olB4qUHmZRzZiiUdWOx9NamUbOhiHSHKyeEFTM9DwQQQxyfB7PyHhOpP46uFYZM23-75j
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>2021-09-20T10:47:21.614Z</td>
+                            <td>hello@example.com (Hello Example)</td>
+                            <td>hOFrKPNK1wpmSIhEASb3W50Sp0Z4bIqFQVgeimPmoco</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+            <form>
+                <div>
+                    <button type="button" name="add">Add</button>
+                    <button type="button" name="remove">Remove</button>
+                    <button type="button" name="removeAll">Remove All</button>
+                    <button type="reset">Reset</button>
+                </div>
+            </form>
         </section>
     </main>
 

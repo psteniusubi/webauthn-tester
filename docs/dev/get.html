@@ -2,15 +2,38 @@
 <html>
 
 <head>
-    <title>Get credential</title>
+    <title>WebAuthn Get Credential</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <link rel="icon" href="../../assets/common/images/favicon.png" referrerpolicy="no-referrer" />
-    <link rel="stylesheet" type="text/css" href="../../assets/common/styles/ubisecure.css" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" type="text/css" href="../../assets/common/styles/ubisecure.css" />
+    <link rel="stylesheet" type="text/css" href="../../oidc-tester/assets/local/styles/collapsed.css" />
     <style type="text/css">
         :root {
             --font-size: 12pt;
             --grid-main-area-width: minmax(auto, 72em);
+        }
+
+        section>form :is(input, select):invalid,
+        section>form .error {
+            outline: 2px solid salmon;
+            outline-offset: -2px;
+        }
+
+        section.collapsed>h2>label,
+        section.collapsed>h3>label {
+            cursor: pointer;
+        }
+
+        section>form textarea {
+            white-space: pre;
+            word-wrap: normal;
+            word-break: normal;
+            overflow-x: hidden;
+            overflow-y: scroll;
+            font-family: monospace;
+            resize: vertical;
+            height: 10em;
         }
     </style>
     <script type="module">
@@ -51,7 +74,103 @@
 
     <main>
         <section class="outline">
-            <h1>Get WebAuthn Credential</h1>
+            <section id="PublicKeyCredential" class="collapsed">
+                <input type="checkbox" id="PublicKeyCredential_hide" checked />
+                <h2><label for="PublicKeyCredential_hide">PublicKeyCredential</label></h2>
+                <section>
+                    <form autocomplete="off" novalidate>
+                        <label>
+                            <span>isUserVerifyingPlatformAuthenticatorAvailable</span>
+                            <input class="flex1" type="text" placeholder="isUserVerifyingPlatformAuthenticatorAvailable"
+                                name="isUserVerifyingPlatformAuthenticatorAvailable" readonly />
+                        </label>
+                    </form>
+                </section>
+            </section>
+        </section>
+
+        <section class="outline">
+            <section id="PublicKeyCredentialRequestOptions" class="collapsed">
+                <input type="checkbox" id="PublicKeyCredentialRequestOptions_hide" checked />
+                <h2><label for="PublicKeyCredentialRequestOptions_hide">PublicKeyCredentialRequestOptions</label></h2>
+                <section>
+                    <form autocomplete="off" novalidate="">
+                        <label>
+                            <span>rpId</span>
+                            <select class="flex1" name="rpId" placeholder="rpId">
+                                <option></option>
+                                <option id="_host"></option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>allowCredentials</span>
+                            <select class="flex1" name="allowCredentials" placeholder="allowCredentials">
+                                <option></option>
+                                <option>All</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>userVerification</span>
+                            <select class="flex1" name="userVerification"
+                                placeholder="userVerification">
+                                <option></option>
+                                <option>required</option>
+                                <option>preferred</option>
+                                <option>discouraged</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>timeout</span>
+                            <select class="flex1" name="timeout" placeholder="timeout">
+                                <option></option>
+                                <option>5000</option>
+                                <option>15000</option>
+                                <option>30000</option>
+                            </select>
+                        </label>
+                        <label>
+                            <textarea class="flex1" name="CredentialRequestOptions "
+                                placeholder="CredentialRequestOptions" readonly></textarea>
+                        </label>
+                        <div>
+                            <button type="submit">Create</button>
+                            <button type="reset">Reset</button>
+                        </div>
+                    </form>
+                </section>
+            </section>
+            <section id="AuthenticatorAssertionResponse" class="collapsed">
+                <input type="checkbox" id="AuthenticatorAssertionResponse_hide" checked />
+                <h3><label for="AuthenticatorAssertionResponse_hide">AuthenticatorAssertionResponse</label></h3>
+                <section>
+                    <form autocomplete="off">
+                        <div><span>PublicKeyCredential</span></div>
+                        <div>
+                            <textarea class="flex1" name="PublicKeyCredential" placeholder="PublicKeyCredential"
+                                readonly></textarea>
+                        </div>
+                        <div><span>clientDataJSON</span></div>
+                        <div>
+                            <textarea class="flex1" name="clientDataJSON" placeholder="clientDataJSON"
+                                readonly></textarea>
+                        </div>
+                        <div><span>authenticatorData</span></div>
+                        <div>
+                            <textarea class="flex1" name="authenticatorData" placeholder="authenticatorData"
+                                readonly></textarea>
+                        </div>
+                        <div><span>credentialPublicKey (from storage)</span></div>
+                        <div>
+                            <textarea class="flex1" name="credentialPublicKey" placeholder="credentialPublicKey"
+                                readonly></textarea>
+                        </div>
+                        <label>
+                            <span>signature</span>
+                            <input class="flex1" type="text" placeholder="signature" name="signature" readonly />
+                        </label>
+                    </form>
+                </section>
+            </section>
         </section>
     </main>
 
