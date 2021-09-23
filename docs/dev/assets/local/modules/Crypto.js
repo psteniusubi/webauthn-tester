@@ -1,5 +1,12 @@
 import { encodeArray } from "./base64.js";
 
+/**
+ * Convert Cose key to JWK
+ * @see https://datatracker.ietf.org/doc/html/rfc8152
+ * @see https://www.iana.org/assignments/cose/cose.xhtml
+ * @param {object} data - Cose
+ * @returns {object} - JWK
+ */
 export function coseToJwk(data) {
 	let alg, crv;
 	switch (data[1]) {
@@ -37,6 +44,12 @@ export function coseToJwk(data) {
 	}
 }
 
+/**
+ * Returns WebCrypto algorithm
+ * @param {object} jwk - JWK
+ * @param {string} alg - JWA identifier
+ * @returns {object} - WebCrypto algorithm
+ */
 export function getAlgorithm(jwk, alg) {
 	var algorithm;
 	switch (jwk.kty) {
@@ -83,6 +96,13 @@ export function getAlgorithm(jwk, alg) {
 	return algorithm;
 }
 
+/**
+ * Converts JWK to WebCrypto compatible format then invokes crypto.subtle.importKey
+ * @see https://w3c.github.io/webcrypto/#SubtleCrypto-method-importKey
+ * @param {object} jwk - JWK
+ * @param {string} alg - JWA identifier
+ * @returns {Promise<CryptoKey} - WebCrypto key
+ */
 export async function importJWK(jwk, alg) {
 	var key;
 	switch (jwk.kty) {
@@ -110,10 +130,22 @@ export async function importJWK(jwk, alg) {
 	return await crypto.subtle.importKey("jwk", key, algorithm, false, ["verify"]);
 }
 
+/**
+ * Invokes crypto.subtle.digest to calculate SHA-256 digest
+ * @see https://w3c.github.io/webcrypto/#SubtleCrypto-method-digest
+ * @param {ArrayBuffer} data 
+ * @returns {Promise<ArrayBuffer}
+ */
 export async function sha256(data) {
 	return await crypto.subtle.digest("SHA-256", data);
 }
 
+/**
+ * Invokes crypto.getRandomValues to generate random byte array
+ * @see https://w3c.github.io/webcrypto/#dfn-Crypto-method-getRandomValues
+ * @param {int} length - number of bytes
+ * @returns {Uint8Array}
+ */
 export function getRandomBytes(length) {
 	var array = new Uint8Array(length ?? 32);
 	crypto.getRandomValues(array);

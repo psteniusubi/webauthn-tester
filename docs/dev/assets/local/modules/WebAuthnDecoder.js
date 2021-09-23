@@ -2,6 +2,11 @@ import { CborSimpleDecoder, BinaryReader } from "../../../../../frontend/cbor/as
 import * as WebAuthn from "./WebAuthnTypes.js";
 import { coseToJwk } from "./Crypto.js";
 
+/**
+ * Convert to Uint8Array
+ * @param {Uint8Array|ArrayBuffer} data 
+ * @returns {Uint8Array}
+ */
 export function toUint8Array(data) {
     if (data instanceof Uint8Array) {
         return data;
@@ -12,7 +17,12 @@ export function toUint8Array(data) {
     throw new Error("invalid argument");
 }
 
-export function toArrayBuffer(data) {
+/**
+ * Convert to ArrayBuffer
+ * @param {Uint8Array|ArrayBuffer} data 
+ * @returns {ArrayBuffer}
+ */
+ export function toArrayBuffer(data) {
     if (data instanceof Uint8Array) {
         return data.buffer;
     }
@@ -22,7 +32,12 @@ export function toArrayBuffer(data) {
     throw new Error("invalid argument");
 }
 
-export function toDataView(data) {
+/**
+ * Convert to DataView
+ * @param {Uint8Array|ArrayBuffer|DataView} data 
+ * @returns {DataView}
+ */
+ export function toDataView(data) {
     if (data instanceof DataView) {
         return data;
     }
@@ -35,16 +50,34 @@ export function toDataView(data) {
     throw new Error("invalid argument");
 }
 
+/**
+ * Invokes JSON.parse to decode clientDataJSON
+ * @see https://w3c.github.io/webauthn/#dom-authenticatorresponse-clientdatajson
+ * @param {Uint8Array|ArrayBuffer} data 
+ * @returns {object}
+ */
 export function decodeClientDataJSON(data) {
     data = toUint8Array(data);
     return JSON.parse(Array.from(data, t => String.fromCharCode(t)).join(""))
 }
 
+/**
+ * Invokes CborSimpleDecoder.readObject to decode attestationObject
+ * @see https://w3c.github.io/webauthn/#dom-authenticatorattestationresponse-attestationobject
+ * @param {Uint8Array|ArrayBuffer} data 
+ * @returns {object}
+ */
 export function decodeAttestationObject(data) {
     data = toArrayBuffer(data);
     return CborSimpleDecoder.readObject(new BinaryReader(data));
 }
 
+/**
+ * Decodes authenticatorData
+ * @see https://w3c.github.io/webauthn/#authenticator-data
+ * @param {Uint8Array|ArrayBuffer} data 
+ * @returns {WebAuthn.AuthenticatorData}
+ */
 export function decodeAuthenticatorData(data) {
     data = toArrayBuffer(data);
     const reader = new BinaryReader(data);

@@ -27,7 +27,7 @@ function createCredentialsList(select, settings) {
 	return select;
 }
 
-function addCredential(settings, user, id, publicKey) {
+function addCredential(settings, user, id, credentialPublicKey) {
 	settings.credentials[id] = {
 		"instant":new Date().toISOString(),
 		"user":{
