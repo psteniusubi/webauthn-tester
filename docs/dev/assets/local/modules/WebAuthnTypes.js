@@ -273,13 +273,13 @@ export class AuthenticatorData {
     get ed() { return (this.flags & 0x80) != 0; }
     signCount // int
     attestedCredentialData // AttestedCredentialData
-    extensons // ArrayBuffer
+    extensions // ArrayBuffer
     constructor(obj) {
         this.rpIdHash = obj?.rpIdHash;
         this.flags = obj?.flags;
         this.signCount = obj?.signCount;
         this.attestedCredentialData = new AttestedCredentialData(obj?.attestedCredentialData);
-        this.extensons = obj?.extensions;
+        this.extensions = obj?.extensions;
     }
     toJson() {
         return {
@@ -293,7 +293,7 @@ export class AuthenticatorData {
             },
             signCount: this.signCount ?? undefined,
             attestedCredentialData: this.at ? this.attestedCredentialData?.toJson() : undefined,
-            extensons: this.ed ? this.extensons ?? undefined : undefined,
+            extensions: this.ed ? this.extensions ?? undefined : undefined,
         }
     }
 }
