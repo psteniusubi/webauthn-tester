@@ -107,6 +107,35 @@
                 const authData = Decoder.decodeAuthenticatorData(attestationObject.authData);
                 console.log(JSON.stringify(authData.toJson(), replacer, 2));
             }
+            testDecodeAuthenticatorAttestationResponse2() {
+                const create = {
+                    "id": "fFhwa6bFAAc44fV5KJi99RjJAPH6MTvtAhEW1zWEh0RPGA5N8tq1YWj7D9L9kHHZN9ld9k-XSOZqqBuZpMUZzngl2JLuzSb3TnaVSlQde-js209W0jZipD-j4GUhSe_f",
+                    "type": "public-key",
+                    "rawId": "fFhwa6bFAAc44fV5KJi99RjJAPH6MTvtAhEW1zWEh0RPGA5N8tq1YWj7D9L9kHHZN9ld9k-XSOZqqBuZpMUZzngl2JLuzSb3TnaVSlQde-js209W0jZipD-j4GUhSe_f",
+                    "response": {
+                        "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiUkd1ZW13X0RtNmQzcS1yOVU4cmltRTFfTGgwIiwib3JpZ2luIjoiaHR0cHM6Ly9wc3Rlbml1c3ViaS5leGFtcGxlLmNvbSIsImNyb3NzT3JpZ2luIjpmYWxzZSwib3RoZXJfa2V5c19jYW5fYmVfYWRkZWRfaGVyZSI6ImRvIG5vdCBjb21wYXJlIGNsaWVudERhdGFKU09OIGFnYWluc3QgYSB0ZW1wbGF0ZS4gU2VlIGh0dHBzOi8vZ29vLmdsL3lhYlBleCJ9",
+                        "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVjkxB02IEA79xrFLbaG8udc2PodExfmvC5K0iZCgpfgfTRFAAAcFQAAAAAAAAAAAAAAAAAAAAAAYHxYcGumxQAHOOH1eSiYvfUYyQDx-jE77QIRFtc1hIdETxgOTfLatWFo-w_S_ZBx2TfZXfZPl0jmaqgbmaTFGc54JdiS7s0m9052lUpUHXvo7NtPVtI2YqQ_o-BlIUnv36UBAgMmIAEhWCBCXRs9UtZ9aFGStuRf3ksydnyyI0s8C1lAkpWK3eFUZCJYIHYZ2TkPvHhCUPErrTxU76noP1QvWChMGhV4Vw9CXgID"
+                    }
+                }
+
+                const response = new WebAuthn.PublicKeyCredential();
+                response.id = create.id;
+                response.type = create.type;
+                response.rawId = decodeArray(create.rawId);
+                response.response = new WebAuthn.AuthenticatorAttestationResponse();
+                response.response.clientDataJSON = decodeArray(create.response.clientDataJSON);
+                response.response.attestationObject = decodeArray(create.response.attestationObject);
+                console.log(JSON.stringify(response, replacer, 2));
+
+                const clientDataJSON = Decoder.decodeClientDataJSON(response.response.clientDataJSON);
+                console.log(JSON.stringify(clientDataJSON, replacer, 2));
+
+                const attestationObject = Decoder.decodeAttestationObject(response.response.attestationObject);
+                console.log(JSON.stringify(attestationObject, replacer, 2));
+
+                const authData = Decoder.decodeAuthenticatorData(attestationObject.authData);
+                console.log(JSON.stringify(authData.toJson(), replacer, 2));
+            }
             async testCreateAndGet1() {
                 const create = {
                     "id": "ZR2K8-8IL3grLDHmvTe7fUG303IXNbKhG6N3CZIWC18",

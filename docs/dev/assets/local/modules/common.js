@@ -6,9 +6,9 @@ export const notEmpty = value => notNull(value) && value !== "";
 export const isString = value => notNull(value) && (typeof value === "string");
 export const isFunction = value => notNull(value) && (typeof value === "function");
 
-export const assertNotNull = value => notNull() || invalidArgument();
-export const assertString = value => isString() || invalidArgument();
-export const assertFunction = value => isFunction() || invalidArgument();
+export const assertNotNull = value => notNull(value) || invalidArgument();
+export const assertString = value => isString(value) || invalidArgument();
+export const assertFunction = value => isFunction(value) || invalidArgument();
 
 export const ifNotNull = (value, func) => notNull(value) ? (notNull(func) && assertFunction(func) ? func(value) : value) : undefined;
 export const ifNotEmpty = (value, func) => notEmpty(value) ? (notNull(func) && assertFunction(func) ? func(value) : value) : undefined;

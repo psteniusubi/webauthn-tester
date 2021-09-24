@@ -57,12 +57,12 @@
         async function isUserVerifyingPlatformAuthenticatorAvailable() {
             await parsed;
             const section = document.getElementById("PublicKeyCredential");
-            const input = section.querySelector(`input[name="isUserVerifyingPlatformAuthenticatorAvailable"]`);
+            const form = section.querySelector("form");
             try {
                 const value = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-                input.value = value;
-                input.classList.toggle("error", value === false);
-                toggle_section("PublicKeyCredential", false);
+                form["isUserVerifyingPlatformAuthenticatorAvailable"].value = value;
+                form["isUserVerifyingPlatformAuthenticatorAvailable"].classList.toggle("error", value === false);
+                toggle_section("PublicKeyCredential", value === false);
             } catch (error) {
                 input.value = error.toString();
                 input.classList.add("error");

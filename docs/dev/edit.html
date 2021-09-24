@@ -13,14 +13,26 @@
             --font-size: 12pt;
             --grid-main-area-width: minmax(auto, 72em);
         }
+
+        section>form textarea {
+            white-space: pre;
+            word-wrap: normal;
+            word-break: normal;
+            overflow-x: hidden;
+            overflow-y: scroll;
+            font-family: monospace;
+            resize: vertical;
+            height: 10em;
+        }
     </style>
     <script type="module">
         import { parsed } from "../../assets/common/modules/document-promises.js";
-        import { create_repository_menu, set_button_href_handlers } from "../../assets/common/modules/helper-module.js";
+        import { create_repository_menu, set_button_href_handlers, set_table_select_handlers } from "../../assets/common/modules/helper-module.js";
         async function build_page() {
             await parsed;
             await create_repository_menu();
             await set_button_href_handlers();
+            document.querySelectorAll("table.select").forEach(set_table_select_handlers);
         }
         build_page();
     </script>
@@ -83,6 +95,10 @@
                     <button type="button" name="remove">Remove</button>
                     <button type="button" name="removeAll">Remove All</button>
                     <button type="reset">Reset</button>
+                </div>
+                <div><span>PublicKeyCredential</span></div>
+                <div>
+                    <textarea class="flex1" name="PublicKeyCredential" placeholder="PublicKeyCredential"></textarea>
                 </div>
             </form>
         </section>

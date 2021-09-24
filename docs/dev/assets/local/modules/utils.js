@@ -21,5 +21,5 @@ export function toggle_section(id, visible) {
 
 export function clear_error(id) {
     const section = document.getElementById(id);
-    section.querySelectorAll(".error").forEach(e => e.classList.remove(error));
+    section.querySelectorAll(".error").forEach(e => e.classList.remove("error"));
 }

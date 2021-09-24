@@ -39,13 +39,77 @@
     <script type="module">
         import { parsed } from "../../assets/common/modules/document-promises.js";
         import { create_repository_menu, set_button_href_handlers } from "../../assets/common/modules/helper-module.js";
+        import * as WebAuthn from "./assets/local/modules/WebAuthnTypes.js";
+        import { jsonToString, toggle_section, clear_error } from "./assets/local/modules/utils.js";
+        import { ifNotEmpty } from "./assets/local/modules/common.js";
         async function build_page() {
             await parsed;
             await create_repository_menu();
             await set_button_href_handlers();
+            await isUserVerifyingPlatformAuthenticatorAvailable();
+            await initPublicKeyCredentialRequestOptions();
         }
         build_page();
-    </script>
+
+        async function isUserVerifyingPlatformAuthenticatorAvailable() {
+            await parsed;
+            const section = document.getElementById("PublicKeyCredential");
+            const form = section.querySelector("form");
+            try {
+                const value = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+                form["isUserVerifyingPlatformAuthenticatorAvailable"].value = value;
+                form["isUserVerifyingPlatformAuthenticatorAvailable"].classList.toggle("error", value === false);
+                toggle_section("PublicKeyCredential", value === false);
+            } catch (error) {
+                input.value = error.toString();
+                input.classList.add("error");
+                toggle_section("PublicKeyCredential", true);
+            }
+        }
+
+        async function initPublicKeyCredentialRequestOptions() {
+            await parsed;
+            document.getElementById("_host").innerText = location.host;
+            const section = document.getElementById("PublicKeyCredentialRequestOptions");
+            const form = section.querySelector("form");
+            form.addEventListener("input", async e => {
+                const options = await createPublicKeyCredentialRequestOptions();
+                const json = jsonToString(options.toJson());
+                form["CredentialRequestOptions"].value = json;
+            });
+            form.addEventListener("reset", async e => {
+                clear_error("PublicKeyCredentialRequestOptions");
+                toggle_section("PublicKeyCredentialRequestOptions", true);
+
+                const response = document.getElementById("AuthenticatorAssertionResponse");
+                response.querySelector("form").reset();
+                clear_error("AuthenticatorAssertionResponse");
+                toggle_section("AuthenticatorAssertionResponse", false);
+
+                // trigger input event after reset event
+                setTimeout(() => form.dispatchEvent(new InputEvent("input")));
+            });
+            form.addEventListener("submit", async e => {
+                e.preventDefault();
+            });
+            toggle_section("PublicKeyCredentialRequestOptions", true);
+            toggle_section("AuthenticatorAssertionResponse", false);
+            form.dispatchEvent(new InputEvent("input"));
+        }
+        async function createPublicKeyCredentialRequestOptions() {
+            await parsed;
+            const section = document.getElementById("PublicKeyCredentialRequestOptions");
+            const form = section.querySelector("form");
+            const publicKey = new WebAuthn.PublicKeyCredentialRequestOptions();
+            publicKey.rpId = ifNotEmpty(form["rpId"].value);
+            publicKey.allowCredentials = undefined; // TODO
+            publicKey.userVerification = ifNotEmpty(form["userVerification"].value); 
+            publicKey.timeout = ifNotEmpty(form["timeout"].value, Number);
+            const options = new WebAuthn.CredentialRequestOptions();
+            options.publicKey = publicKey;
+            return options;
+        }
+</script>
 </head>
 
 <body>
@@ -129,7 +193,7 @@
                             </select>
                         </label>
                         <label>
-                            <textarea class="flex1" name="CredentialRequestOptions "
+                            <textarea class="flex1" name="CredentialRequestOptions"
                                 placeholder="CredentialRequestOptions" readonly></textarea>
                         </label>
                         <div>
