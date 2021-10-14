@@ -41,10 +41,11 @@
         import { create_repository_menu, set_button_href_handlers } from "../../assets/common/modules/helper-module.js";
         import * as WebAuthn from "./assets/local/modules/WebAuthnTypes.js";
         import * as Decoder from "./assets/local/modules/WebAuthnDecoder.js";
-        import { atobUrlSafe, btoaUrlSafe } from "./assets/local/modules/base64.js";
+        import { atobUrlSafe, btoaUrlSafe, decodeArray } from "./assets/local/modules/base64.js";
         import { getRandomBytes } from "./assets/local/modules/Crypto.js";
         import { jsonToString, toggle_section, clear_error } from "./assets/local/modules/utils.js";
         import { ifNotEmpty } from "./assets/local/modules/common.js";
+        import { readSettings, createCredentialsList } from "./assets/local/modules/settings.js";
         async function build_page() {
             await parsed;
             await create_repository_menu();
@@ -76,6 +77,7 @@
             document.getElementById("_host").innerText = location.host;
             const section = document.getElementById("PublicKeyCredentialCreationOptions");
             const form = section.querySelector("form");
+            createCredentialsList(form.elements["excludeCredentials"], readSettings());
             form.addEventListener("input", async e => {
                 const options = await createPublicKeyCredentialCreationOptions();
                 const json = jsonToString(options.toJson());
@@ -141,7 +143,18 @@
                 WebAuthn.PublicKeyCredentialParameters.publicKey(-257),
             ];
             publicKey.timeout = ifNotEmpty(form["timeout"].value, Number);
-            publicKey.excludeCredentials = []; // TODO
+            const excludeCredentials = [];
+            ifNotEmpty(form["excludeCredentials"].value, value => {
+                if (value === "*") {
+                    const settings = readSettings();
+                    for (const id in settings.credentials) {
+                        excludeCredentials.push(WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray(id)));
+                    }
+                } else {
+                    excludeCredentials.push(WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray(value)));
+                }
+            });
+            publicKey.excludeCredentials = excludeCredentials;
             publicKey.authenticatorSelection.authenticatorAttachment = ifNotEmpty(form["authenticatorSelection.authenticatorAttachment"].value);;
             publicKey.authenticatorSelection.residentKey = ifNotEmpty(form["authenticatorSelection.residentKey"].value);;
             publicKey.authenticatorSelection.userVerification = ifNotEmpty(form["authenticatorSelection.userVerification"].value);;

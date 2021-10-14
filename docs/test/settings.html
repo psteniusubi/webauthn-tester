@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>settings.html</title>
+    <link rel="stylesheet" type="text/css" href="../../js-tester/assets/common/styles/js-tester.css" />
+    <script type="module">
+        import { describeClass, console, assert } from "../../js-tester/assets/common/modules/js-tester.js";
+        import * as settings from "../dev/assets/local/modules/settings.js";
+        class CommonTests {
+            test1() {
+                const s = settings.readSettings();
+                console.log(JSON.stringify(s));
+                for(const id in s.credentials) {                    
+                    console.log(id);
+                    const cred = s.credentials[id];
+                    console.log(JSON.stringify(cred));
+                }
+            }
+        }
+        describeClass(CommonTests);
+    </script>
+</head>
+
+<body>
+    <section id="report"></section>
+</body>
+
+</html>
