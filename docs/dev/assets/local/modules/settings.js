@@ -1,3 +1,5 @@
+import { jsonToString, } from "./utils.js";
+
 function addOptions(select, options) {
 	for(var i in options) {
 		var o = $("<option>")
@@ -33,7 +35,7 @@ export function createCredentialsList(select, settings) {
 	return select;
 }
 
-function addCredential(settings, user, id, credentialPublicKey) {
+export function addCredential(settings, user, id, credentialPublicKey) {
 	settings.credentials[id] = {
 		"instant":new Date().toISOString(),
 		"user":{
@@ -71,9 +73,9 @@ export function readSettings() {
 	return settings;
 }
 
-function saveSettings(settings) {
+export function saveSettings(settings) {
 	if(settings) {
-		window.localStorage.setItem("settings", JSON.stringify(settings, replacer, 2));
+		window.localStorage.setItem("settings", jsonToString(settings));
 	} else {
 		window.localStorage.removeItem("settings");
 	}

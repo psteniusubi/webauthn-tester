@@ -45,7 +45,7 @@
         import { getRandomBytes } from "./assets/local/modules/Crypto.js";
         import { jsonToString, toggle_section, clear_error } from "./assets/local/modules/utils.js";
         import { ifNotEmpty } from "./assets/local/modules/common.js";
-        import { readSettings, createCredentialsList } from "./assets/local/modules/settings.js";
+        import * as Settings from "./assets/local/modules/settings.js";
         async function build_page() {
             await parsed;
             await create_repository_menu();
@@ -77,7 +77,7 @@
             document.getElementById("_host").innerText = location.host;
             const section = document.getElementById("PublicKeyCredentialCreationOptions");
             const form = section.querySelector("form");
-            createCredentialsList(form.elements["excludeCredentials"], readSettings());
+            Settings.createCredentialsList(form.elements["excludeCredentials"], Settings.readSettings());
             form.addEventListener("input", async e => {
                 const options = await createPublicKeyCredentialCreationOptions();
                 const json = jsonToString(options.toJson());
@@ -117,6 +117,8 @@
                     toggle_section("PublicKeyCredentialCreationOptions", false);
                     clear_error("AuthenticatorAttestationResponse");
                     toggle_section("AuthenticatorAttestationResponse", true);
+                    const settings = Settings.readSettings();
+                    Settings.addCredential(settings, options.publicKey.user, attestation_response.id, authData.attestedCredentialData.credentialPublicKey);
                 } catch (error) {
                     toggle_section("AuthenticatorAttestationResponse", true);
                     out["PublicKeyCredential"].value = error.toString();
@@ -146,7 +148,7 @@
             const excludeCredentials = [];
             ifNotEmpty(form["excludeCredentials"].value, value => {
                 if (value === "*") {
-                    const settings = readSettings();
+                    const settings = Settings.readSettings();
                     for (const id in settings.credentials) {
                         excludeCredentials.push(WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray(id)));
                     }
