@@ -40,8 +40,12 @@
         import { parsed } from "../../assets/common/modules/document-promises.js";
         import { create_repository_menu, set_button_href_handlers } from "../../assets/common/modules/helper-module.js";
         import * as WebAuthn from "./assets/local/modules/WebAuthnTypes.js";
+        import * as Decoder from "./assets/local/modules/WebAuthnDecoder.js";
         import { jsonToString, toggle_section, clear_error } from "./assets/local/modules/utils.js";
-        import { ifNotEmpty } from "./assets/local/modules/common.js";
+        import { notNull, ifNotEmpty } from "./assets/local/modules/common.js";
+        import { decodeArray } from "./assets/local/modules/base64.js";
+        import * as Settings from "./assets/local/modules/settings.js";
+        import { getRandomBytes } from "./assets/local/modules/Crypto.js";
         async function build_page() {
             await parsed;
             await create_repository_menu();
@@ -72,6 +76,7 @@
             document.getElementById("_host").innerText = location.host;
             const section = document.getElementById("PublicKeyCredentialRequestOptions");
             const form = section.querySelector("form");
+            Settings.createCredentialsList(form.elements["allowCredentials"], Settings.readSettings());
             form.addEventListener("input", async e => {
                 const options = await createPublicKeyCredentialRequestOptions();
                 const json = jsonToString(options.toJson());
@@ -91,6 +96,45 @@
             });
             form.addEventListener("submit", async e => {
                 e.preventDefault();
+                const options = await createPublicKeyCredentialRequestOptions();
+                const o = options.toJson();
+                form["CredentialRequestOptions"].value = jsonToString(o);
+                const response = document.getElementById("AuthenticatorAssertionResponse");
+                const out = response.querySelector("form");
+                out.reset();
+                try {
+                    const assertion_response = new WebAuthn.PublicKeyCredential(await navigator.credentials.get(o));
+                    out["PublicKeyCredential"].value = jsonToString(assertion_response.toJson());
+                    // clientDataJSON
+                    const clientDataJSON = Decoder.decodeClientDataJSON(assertion_response.response.clientDataJSON);
+                    out["clientDataJSON"].value = jsonToString(clientDataJSON);
+                    // authenticatorData
+                    const authData = Decoder.decodeAuthenticatorData(assertion_response.response.authenticatorData);
+                    out["authenticatorData"].value = jsonToString(authData.toJson());
+                    // credentialPublicKey 
+                    const credential = Settings.getCredential(Settings.readSettings(), assertion_response.id);
+                    if (notNull(credential) && notNull(credential.credentialPublicKey)) {
+                        out["credentialPublicKey"].value = jsonToString(credential.credentialPublicKey);
+                        // signature
+                        const valid = await Decoder.verifyAssertionSignature(assertion_response, credential.credentialPublicKey);
+                        out["signature"].value = valid;
+                        out["signature"].classList.toggle("error", valid === false);
+                    } else {
+                        out["credentialPublicKey"].value = "";
+                        out["credentialPublicKey"].classList.add("error");
+                        out["signature"].value = "credentialPublicKey not found";
+                        out["signature"].classList.add("error");
+                    }
+
+                    clear_error("PublicKeyCredentialRequestOptions");
+                    toggle_section("PublicKeyCredentialRequestOptions", false);
+                    clear_error("AuthenticatorAssertionResponse");
+                    toggle_section("AuthenticatorAssertionResponse", true);
+                } catch (error) {
+                    toggle_section("AuthenticatorAssertionResponse", true);
+                    out["PublicKeyCredential"].value = error.toString();
+                    out["PublicKeyCredential"].classList.add("error");
+                }
             });
             toggle_section("PublicKeyCredentialRequestOptions", true);
             toggle_section("AuthenticatorAssertionResponse", false);
@@ -102,14 +146,27 @@
             const form = section.querySelector("form");
             const publicKey = new WebAuthn.PublicKeyCredentialRequestOptions();
             publicKey.rpId = ifNotEmpty(form["rpId"].value);
-            publicKey.allowCredentials = undefined; // TODO
-            publicKey.userVerification = ifNotEmpty(form["userVerification"].value); 
+            publicKey.challenge = getRandomBytes(20);
+            let allowCredentials = undefined;
+            ifNotEmpty(form["allowCredentials"].value, value => {
+                allowCredentials = [];
+                if (value === "*") {
+                    const settings = Settings.readSettings();
+                    for (const id in settings.credentials) {
+                        allowCredentials.push(WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray(id)));
+                    }
+                } else {
+                    allowCredentials.push(WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray(value)));
+                }
+            });
+            publicKey.allowCredentials = allowCredentials;
+            publicKey.userVerification = ifNotEmpty(form["userVerification"].value);
             publicKey.timeout = ifNotEmpty(form["timeout"].value, Number);
             const options = new WebAuthn.CredentialRequestOptions();
             options.publicKey = publicKey;
             return options;
         }
-</script>
+    </script>
 </head>
 
 <body>
@@ -175,8 +232,7 @@
                         </label>
                         <label>
                             <span>userVerification</span>
-                            <select class="flex1" name="userVerification"
-                                placeholder="userVerification">
+                            <select class="flex1" name="userVerification" placeholder="userVerification">
                                 <option></option>
                                 <option>required</option>
                                 <option>preferred</option>
@@ -197,7 +253,7 @@
                                 placeholder="CredentialRequestOptions" readonly></textarea>
                         </label>
                         <div>
-                            <button type="submit">Create</button>
+                            <button type="submit">Get</button>
                             <button type="reset">Reset</button>
                         </div>
                     </form>

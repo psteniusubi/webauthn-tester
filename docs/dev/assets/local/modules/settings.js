@@ -49,9 +49,9 @@ export function addCredential(settings, user, id, credentialPublicKey) {
 	saveSettings(settings);
 }
 
-function getCredential(settings, id) {
-	var cred = settings.credentials[id];
-	return (cred != undefined) ? Promise.resolve(cred) : Promise.reject("PublicKey not found: " + id);
+export function getCredential(settings, id) {
+	const cred = settings.credentials[id];
+	return cred;
 }
 
 export function readSettings() {
