@@ -28,13 +28,41 @@
     <script type="module">
         import { parsed } from "../../assets/common/modules/document-promises.js";
         import { create_repository_menu, set_button_href_handlers, set_table_select_handlers } from "../../assets/common/modules/helper-module.js";
+        import * as Settings from "./assets/local/modules/settings.js";
         async function build_page() {
             await parsed;
             await create_repository_menu();
             await set_button_href_handlers();
             document.querySelectorAll("table.select").forEach(set_table_select_handlers);
+            await initCredentialsTable();
         }
         build_page();
+
+        async function initCredentialsTable() {
+            await parsed;
+            const section = document.getElementById("CredentialsTable");
+            const tbody = section.querySelector("tbody");
+            tbody.innerHTML = "";
+            const settings = Settings.readSettings();
+            for(const id in settings.credentials) {
+                const cred = settings.credentials[id];
+                const tr = document.createElement("tr");
+
+                let td = document.createElement("td");
+                td.innerText = cred.instant;
+                tr.appendChild(td);
+
+                td = document.createElement("td");
+                td.innerText = `${cred.user.name} (${cred.user.displayName})`;
+                tr.appendChild(td);
+
+                td = document.createElement("td");
+                td.innerText = id;
+                tr.appendChild(td);
+
+                tbody.appendChild(tr);
+            }
+        }
     </script>
 </head>
 
@@ -63,7 +91,7 @@
     </header>
 
     <main>
-        <section class="outline">
+        <section class="outline" id="CredentialsTable">
             <h2>Edit Credentials</h2>
             <section class="scroll">
                 <table class="hover select">
@@ -74,19 +102,7 @@
                             <th>Id</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr>
-                            <td>2021-09-20T08:54:36.545Z</td>
-                            <td>hello@example.com (Hello Example)</td>
-                            <td>FaFobg7rVhN5BcKraGCzYBjJAPH6MTvtAhEW1zWEh0T0_jCtH61daSSPBO_olB4qUHmZRzZiiUdWOx9NamUbOhiHSHKyeEFTM9DwQQQxyfB7PyHhOpP46uFYZM23-75j
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>2021-09-20T10:47:21.614Z</td>
-                            <td>hello@example.com (Hello Example)</td>
-                            <td>hOFrKPNK1wpmSIhEASb3W50Sp0Z4bIqFQVgeimPmoco</td>
-                        </tr>
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </section>
             <form>
