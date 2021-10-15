@@ -1,52 +1,53 @@
-import { jsonToString, } from "./utils.js";
+import { jsonToString } from "./utils.js";
+import { notEmpty, notNull } from "./common.js";
 
-function addOptions(select, options) {
-	for(var i in options) {
-		var o = $("<option>")
-			.attr({"value":options[i]})
-			.text(options[i]);
-		select.append(o);
-	}
-	return select;
-}
-
-export function createCredentialsList(select, settings) {
+export function createCredentialsList(select, settings, id) {
 	select.innerHTML = "";
 
 	let option = document.createElement("option");
 	option.setAttribute("value", "");
-	option.setAttribute("selected", "selected");
 	option.innerText = "";
 	select.appendChild(option);
+
+	let selected = option;
 
 	option = document.createElement("option");
 	option.setAttribute("value", "*");
 	option.innerText = "All";
 	select.appendChild(option);
 
-	for(const id in settings.credentials) {
-		const cred = settings.credentials[id];
-		const text = cred.instant + " - " + cred.user.name + " (" + cred.user.displayName + ")";
+	for (const i in settings.credentials) {
+		const cred = settings.credentials[i];
+		//const text = cred.instant + " - " + cred.user.name + " (" + cred.user.displayName + ")";
+		const text = `${cred.instant} - ${cred.user.name} (${cred.user.displayName})`
 		option = document.createElement("option");
 		option.setAttribute("value", cred.id);
 		option.innerText = text;
-		select.appendChild(option);		
+		select.appendChild(option);
+		if (notEmpty(id) && (cred.id === id)) {
+			selected = option;
+		}
 	}
+
+	selected.setAttribute("selected", "selected");
+
 	return select;
 }
 
 export function addCredential(settings, user, id, credentialPublicKey) {
-	settings.credentials[id] = {
-		"instant":new Date().toISOString(),
-		"user":{
-			"name":user.name,
-			"id":user.id,
-			"displayName":user.displayName,
-		},
-		"id":id,
-		"credentialPublicKey":credentialPublicKey,
-	};
-	saveSettings(settings);
+	if (notEmpty(id)) {
+		settings.credentials[id] = {
+			"instant": new Date().toISOString(),
+			"user": {
+				"name": user.name,
+				"id": user.id,
+				"displayName": user.displayName,
+			},
+			"id": id,
+			"credentialPublicKey": credentialPublicKey,
+		};
+		saveSettings(settings);
+	}
 }
 
 export function getCredential(settings, id) {
@@ -55,26 +56,30 @@ export function getCredential(settings, id) {
 }
 
 export function readSettings() {
-	let settings;
+	let settings = {
+		"credentials": {},
+	};
 	const s = window.localStorage.getItem("settings");
-	if(s) {
-		settings = JSON.parse(s);
-		if(settings.rp) {
+	if (notEmpty(s)) {
+		try {
+			settings = JSON.parse(s);
+		} catch {
+		}
+		if ("rp" in settings) {
 			delete settings.rp;
 		}
-		if(settings.user) {
+		if ("user" in settings) {
 			delete settings.user;
 		}
-	} else {
-		settings = {
-			"credentials": {},
-		};
+		if (!("credentials" in settings)) {
+			settings.credentials = {};
+		}
 	}
 	return settings;
 }
 
 export function saveSettings(settings) {
-	if(settings) {
+	if (notNull(settings)) {
 		window.localStorage.setItem("settings", jsonToString(settings));
 	} else {
 		window.localStorage.removeItem("settings");

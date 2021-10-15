@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>WebAuthn Get Credential</title>
     <meta charset="utf-8" />
+    <title>WebAuthn Get Credential</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <link rel="icon" href="../../assets/common/images/favicon.png" referrerpolicy="no-referrer" />
     <link rel="stylesheet" type="text/css" href="../../assets/common/styles/ubisecure.css" />
@@ -76,7 +76,11 @@
             document.getElementById("_host").innerText = location.host;
             const section = document.getElementById("PublicKeyCredentialRequestOptions");
             const form = section.querySelector("form");
-            Settings.createCredentialsList(form.elements["allowCredentials"], Settings.readSettings());
+            const q = new URLSearchParams(location.hash.substr(1));
+            Settings.createCredentialsList(form.elements["allowCredentials"], Settings.readSettings(), q.has("id") ? q.get("id") : null);
+            if(q.has("id")) {
+                history.replaceState(null, null, location.pathname);
+            }
             form.addEventListener("input", async e => {
                 const options = await createPublicKeyCredentialRequestOptions();
                 const json = jsonToString(options.toJson());
@@ -85,11 +89,11 @@
             form.addEventListener("reset", async e => {
                 clear_error("PublicKeyCredentialRequestOptions");
                 toggle_section("PublicKeyCredentialRequestOptions", true);
+                clear_error("AuthenticatorAssertionResponse");
+                toggle_section("AuthenticatorAssertionResponse", false);
 
                 const response = document.getElementById("AuthenticatorAssertionResponse");
                 response.querySelector("form").reset();
-                clear_error("AuthenticatorAssertionResponse");
-                toggle_section("AuthenticatorAssertionResponse", false);
 
                 // trigger input event after reset event
                 setTimeout(() => form.dispatchEvent(new InputEvent("input")));
@@ -152,8 +156,9 @@
                 allowCredentials = [];
                 if (value === "*") {
                     const settings = Settings.readSettings();
-                    for (const id in settings.credentials) {
-                        allowCredentials.push(WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray(id)));
+                    for (const i in settings.credentials) {
+                        const cred = settings.credentials[i];
+                        allowCredentials.push(WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray(cred.id)));
                     }
                 } else {
                     allowCredentials.push(WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray(value)));

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>WebAuthn Create Credential</title>
     <meta charset="utf-8" />
+    <title>WebAuthn Create Credential</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <link rel="icon" href="../../assets/common/images/favicon.png" referrerpolicy="no-referrer" />
     <link rel="stylesheet" type="text/css" href="../../assets/common/styles/ubisecure.css" />
@@ -86,11 +86,11 @@
             form.addEventListener("reset", async e => {
                 clear_error("PublicKeyCredentialCreationOptions");
                 toggle_section("PublicKeyCredentialCreationOptions", true);
+                clear_error("AuthenticatorAttestationResponse");
+                toggle_section("AuthenticatorAttestationResponse", false);
 
                 const response = document.getElementById("AuthenticatorAttestationResponse");
                 response.querySelector("form").reset();
-                clear_error("AuthenticatorAttestationResponse");
-                toggle_section("AuthenticatorAttestationResponse", false);
 
                 // trigger input event after reset event
                 setTimeout(() => form.dispatchEvent(new InputEvent("input")));
@@ -149,8 +149,9 @@
             ifNotEmpty(form["excludeCredentials"].value, value => {
                 if (value === "*") {
                     const settings = Settings.readSettings();
-                    for (const id in settings.credentials) {
-                        excludeCredentials.push(WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray(id)));
+                    for (const i in settings.credentials) {
+                        const cred = settings.credentials[i];
+                        excludeCredentials.push(WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray(cred.id)));
                     }
                 } else {
                     excludeCredentials.push(WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray(value)));
