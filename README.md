@@ -10,29 +10,25 @@ The [Working with FIDO and the WebAuthn API](https://www.ubisecure.com/api/fido-
 
 You need a WebAuthn authenticator to use the tool. Windows Hello, Android Fingerprint or Apple Touch ID are examples of very common authenticators.
 
-If you are using Windows 10 version 1809 or later, then you only need to [set up Windows Hello](https://support.microsoft.com/en-us/help/4028017/windows-learn-about-windows-hello-and-set-it-up) and use Microsoft Edge to run the tool.
-
-Beginning Windows 10 version 1903 (May 2019 update) also Chrome and Firefox are using Windows Hello as their platform authenticators.
-
-With Android and OS X you can use a recent version of Chrome.
-
-With iOS and OS X it should be possible to use Safari with experimental Web Authentication support enabled.
-
-This is status by April 2019. 
+If you are using Windows 10 or later, then you only need to [set up Windows Hello](https://support.microsoft.com/en-us/help/4028017/windows-learn-about-windows-hello-and-set-it-up).
 
 # Instructions
 
 ## Register (Create Credential)
 
-https://psteniusubi.github.io/webauthn-tester/credential-create.html
+https://psteniusubi.github.io/webauthn-tester/create.html
+
+This app stores credentials in local storage of your browser.
 
 ## Authenticate (Get Credential)
 
-https://psteniusubi.github.io/webauthn-tester/credential-get.html
+https://psteniusubi.github.io/webauthn-tester/get.html
 
 ## Edit Credentials
 
-https://psteniusubi.github.io/webauthn-tester/credential-edit.html
+https://psteniusubi.github.io/webauthn-tester/edit.html
+
+This page lets you copy and paste portable credentials across browsers and devices.
 
 # Decoding WebAuthn data types
 
@@ -55,51 +51,19 @@ the tool will render this as
 Rendering is implemented with `JSON.stringify` and a replacer function. For example
 
 ```javascript
-function replacer(k,v) {
-    if(v && v.constructor === Uint8Array) {
+import { encodeArray } from "./base64.js";
+
+export function replacer(k, v) {
+    if (v instanceof ArrayBuffer) {
         return encodeArray(v);
     }
-    if(v && v.constructor === ArrayBuffer) {
+    if (v instanceof Uint8Array) {
         return encodeArray(v);
     }
-    ...
+    return v;
 }
 
 JSON.stringify(publicKeyCredential, replacer, 2);
-```
-
-## PublicKeyCredential
-
-Extending replacer to display PublicKeyCredential and other WebAuthn data types
-
-```javascript
-function replacer(k,v) {
-    ...
-    if(v && v.constructor === PublicKeyCredential) {
-        return {
-            id: v.id,
-            type: v.type,
-            rawId: v.rawId,
-            response: v.response,
-        };
-    }
-    if(v && v.constructor === AuthenticatorAttestationResponse) {
-        return {
-            clientDataJSON: v.clientDataJSON,
-            attestationObject: v.attestationObject, 
-        };
-    }
-    if(v && v.constructor === AuthenticatorAssertionResponse) {
-        return {
-            clientDataJSON: v.clientDataJSON,
-            authenticatorData: v.authenticatorData, 
-            signature: v.signature, 
-            userHandle: v.userHandle, 
-        };
-    }
-    ...
-    return v;
-}
 ```
 
 ## AuthenticatorAttestationResponse
@@ -111,8 +75,9 @@ https://w3c.github.io/webauthn/#dom-authenticatorresponse-clientdatajson
 clientDataJSON is a JSON object serialized to bytes. The code below assumes only ASCII characters.
 
 ```javascript
-function decodeClientDataJSON(data) {
-    return JSON.parse(Array.from(new Uint8Array(data), t => String.fromCharCode(t)).join(""))
+export function decodeClientDataJSON(data) {
+    data = toUint8Array(data);
+    return JSON.parse(Array.from(data, t => String.fromCharCode(t)).join(""))
 }
 ```
 
@@ -120,28 +85,26 @@ function decodeClientDataJSON(data) {
 
 https://w3c.github.io/webauthn/#dom-authenticatorattestationresponse-attestationobject
 
-attestationObject is CBOR encoded. The code below uses cbor.js from https://github.com/paroga/cbor-js.
+attestationObject is CBOR encoded. The code below uses CborSimpleDecoder.
 
 ```javascript
-function decodeAttestationObject(data) {
-    return CBOR.decode(data);
+export function decodeAttestationObject(data) {
+    data = toArrayBuffer(data);
+    return CborSimpleDecoder.readObject(new BinaryReader(data));
 }
 ```
 
 ### <a name="authData">authData</a>
 
-https://w3c.github.io/webauthn/#sec-authenticator-data
+https://w3c.github.io/webauthn/#sctn-authenticator-data
 
 Authenticator data (authData and authenticatorData) is a compact binary encoding.
 
 ```javascript
-function decodeAuthenticatorData(data) {
-    if(data.constructor === Uint8Array) {
-        data = data.buffer.slice(data.byteOffset, data.byteLength + data.byteOffset);
-    }
-    if(data.constructor !== ArrayBuffer) {
-        throw "Invalid argument: " + data.constructor;
-    }
+export function decodeAuthenticatorData(data) {
+    data = toArrayBuffer(data);
+    const reader = new BinaryReader(data);
+
     /**
      * https://w3c.github.io/webauthn/#sec-authenticator-data
      *
@@ -155,42 +118,41 @@ function decodeAuthenticatorData(data) {
      * attestedCredentialData variable
      * extensions variable
      */
-    var view = new DataView(data);
-    var offset = 0;
-    var rpIdHash = view.buffer.slice(offset, offset + 32); offset += 32;
-    var flags = view.getUint8(offset); offset += 1;
-    var signCount = view.getUint32(offset, false); offset += 4;
-    var authenticatorData = {
-        rpIdHash: rpIdHash,
-        flags: {
-            value: flags,
-            up: (flags & 0x01) != 0,
-            uv: (flags & 0x04) != 0,
-            at: (flags & 0x40) != 0,
-            ed: (flags & 0x80) != 0,
-        },
-        signCount: signCount,
-    };
+    const authenticatorData = new WebAuthn.AuthenticatorData();
+    // rpIdHash
+    authenticatorData.rpIdHash = reader.readBytes(32);
+    // flags
+    authenticatorData.flags = reader.readUInt8();
+    // signCount
+    authenticatorData.signCount = reader.readUInt32();
+
     // attestedCredentialData 
-    if(authenticatorData.flags.at) {
+    if (authenticatorData.at) {
         /**
          * https://w3c.github.io/webauthn/#sec-attested-credential-data
          *
-         * aaguid  16
+         * aaguid 16
          * credentialIdLength 2
-         * credentialId  L
+         * credentialId L
          * credentialPublicKey variable
          */
-        var aaguid = view.buffer.slice(offset, offset + 16); offset += 16;
-        var credentialIdLength = view.getUint16(offset, false); offset += 2;
-        var credentialId = view.buffer.slice(offset, offset + credentialIdLength); offset += credentialIdLength;
-        var credentialPublicKey = view.buffer.slice(offset);
-        authenticatorData.attestedCredentialData = {
-            aaguid: aaguid,
-            credentialId: credentialId,
-            credentialPublicKey: credentialPublicKey,
-        };
+        authenticatorData.attestedCredentialData = new WebAuthn.AttestedCredentialData();
+        // aaguid
+        authenticatorData.attestedCredentialData.aaguid = reader.readBytes(16);
+        // credentialIdLength
+        const credentialIdLength = reader.readUInt16();
+        // credentialId
+        authenticatorData.attestedCredentialData.credentialId = reader.readBytes(credentialIdLength);
+        // credentialPublicKey
+        const credentialPublicKey = CborSimpleDecoder.readObject(reader);
+        authenticatorData.attestedCredentialData.credentialPublicKey = coseToJwk(credentialPublicKey);
     }
+
+    // extensions
+    if (authenticatorData.ed) {
+        authenticatorData.extensions = reader.readBytes(reader.byteLength - reader.byteOffset - reader.readerOffset);
+    }
+
     return authenticatorData;
 }
 ```
@@ -206,46 +168,41 @@ credentialPublicKey is COSE encoded. This code translates COSE to JWK, a more hu
 This is not a general purpose COSE translator. Only WebAuthn algorithm identifiers are recognized.
 
 ```javascript
-function decodeCredentialPublicKey(data) {
-    var obj = CBOR.decode(data);
-    return coseToJwk(obj);
-}
-
-function coseToJwk(data) {
-    var alg, crv;
-    switch(data[1]) {        
-        case 2: // EC
-            switch(data[3]) {
-                case -7: alg = "ES256"; break;
-                default: throw "Invalid argument";
-            }
-            switch(data[-1]) {
-                case 1: crv = "P-256"; break;
-                default: throw "Invalid argument";
-            }
-            if(!data[-2] || !data[-3]) throw "Invalid argument";
-            return {
-                "kty":"EC",
-                "alg":alg,
-                "crv":crv,
-                "x":encodeArray(data[-2]),
-                "y":encodeArray(data[-3]),
-            };
-        case 3: // RSA
-            switch(data[3]) {
-                case -37: alg = "PS256"; break;
-                case -257: alg = "RS256"; break;
-                default: throw "Invalid argument";
-            }
-            if(!data[-1] || !data[-2]) throw "Invalid argument";
-            return {
-                "kty":"RSA",
-                "alg":alg,
-                "n":encodeArray(data[-1]),
-                "e":encodeArray(data[-2]),
-            };
-        default: throw "Invalid argument";
-    }
+export function coseToJwk(data) {
+	let alg, crv;
+	switch (data[1]) {
+		case 2: // EC
+			switch (data[3]) {
+				case -7: alg = "ES256"; break;
+				default: throw new Error("invalid argument");
+			}
+			switch (data[-1]) {
+				case 1: crv = "P-256"; break;
+				default: throw new Error("invalid argument");
+			}
+			if (!data[-2] || !data[-3]) throw new Error("invalid argument");
+			return {
+				"kty": "EC",
+				"alg": alg,
+				"crv": crv,
+				"x": encodeArray(data[-2]),
+				"y": encodeArray(data[-3]),
+			};
+		case 3: // RSA
+			switch (data[3]) {
+				case -37: alg = "PS256"; break;
+				case -257: alg = "RS256"; break;
+				default: throw new Error("invalid argument");
+			}
+			if (!data[-1] || !data[-2]) throw new Error("invalid argument");
+			return {
+				"kty": "RSA",
+				"alg": alg,
+				"n": encodeArray(data[-1]),
+				"e": encodeArray(data[-2]),
+			};
+		default: throw new Error("invalid argument");
+	}
 }
 ```
 
@@ -261,50 +218,45 @@ See [authData](#authData)
 
 ### signature
 
-https://w3c.github.io/webauthn/#signature-attestation-types
+https://w3c.github.io/webauthn/#sctn-op-get-assertion
 
 The R and S components of the EC signature of WebAuthn are ASN.1 encoded. The code below translates to WebCrypto compatible signature format. 
 
 This implementation only supports 256 bit R and S components of ES256 algorithm.
 
 ```javascript
-function decodeSignature(publicKey, signature) {
-    if(signature.constructor === Uint8Array) {
-        signature = signature.buffer.slice(signature.byteOffset, signature.byteLength + signature.byteOffset);
-    }
-    if(signature.constructor !== ArrayBuffer) {
-        return Promise.reject("Invalid argument: " + signature.constructor);
-    }
-    if(publicKey.kty == "EC") {
+export function decodeSignature(publicKey, signature) {
+    signature = toArrayBuffer(signature);
+    const reader = new BinaryReader(signature);
+    if (publicKey.kty === "EC") {
         /*
             0x30|b1|0x02|b2|r|0x02|b3|s
             b1 = Length of remaining data
             b2 = Length of r
             b3 = Length of s 
          */
-        var rs = new Uint8Array(64);
-        var view = new DataView(signature);
-        var offset = 0;
-        if(view.getUint8(offset++) != 0x30) return Promise.reject("Invalid argument");
-        var b1 = view.getUint8(offset++);
-        if(view.getUint8(offset++) != 0x02) return Promise.reject("Invalid argument");
-        var b2 = view.getUint8(offset++);
-        if(b2 > 32) {
+        if (reader.readUInt8() != 0x30) throw new Error("invalid argument");
+        const b1 = reader.readUInt8();
+        if (reader.readUInt8() != 0x02) throw new Error("invalid argument");
+        let b2 = reader.readUInt8();
+        if (b2 > 32) {
             b2--;
-            offset++;
+            reader.readUInt8();
         }
-        rs.set(new Uint8Array(view.buffer.slice(offset, offset+b2)), 0);
-        offset += b2;
-        if(view.getUint8(offset++) != 0x02) return Promise.reject("Invalid argument");
-        var b3 = view.getUint8(offset++);
-        if(b3 > 32) {
+        const r = reader.readBytes(b2);
+        if (reader.readUInt8() != 0x02) throw new Error("invalid argument");
+        let b3 = reader.readUInt8();
+        if (b3 > 32) {
             b3--;
-            offset++;
+            reader.readUInt8();
         }
-        rs.set(new Uint8Array(view.buffer.slice(offset, offset+b3)), b2);
-        return Promise.resolve(rs);
+        const s = reader.readBytes(b3);
+        const rs = new Uint8Array(64);
+        rs.set(new Uint8Array(r), 0);
+        rs.set(new Uint8Array(s), 32);
+        return rs;
     } else {
-        return Promise.resolve(signature);
+        return signature;
     }
 }
 ```
@@ -313,7 +265,7 @@ function decodeSignature(publicKey, signature) {
 
 https://w3c.github.io/webauthn/#assertion-signature
 
-https://w3c.github.io/webauthn/#op-get-assertion
+https://w3c.github.io/webauthn/#sctn-op-get-assertion
 
 To verify assertion signature with WebCrypto the algorithm identifiers, signature value and public key need to be translated into WebCrypto compatible format.
 
@@ -322,121 +274,22 @@ The signature is calculated over `authenticatorData || sha256(clientDataJSON)`.
 Note that WebCrypto in Microsoft Edge does not support EC signature algorithm. EC is commonly used with cross-platform (USB connected) authenticators.
 
 ```javascript
-function verifyAssertionSignature(publicKeyCredential, publicKey) {    
-    
-    var alg = publicKey.alg || "S256";
+export async function verifyAssertionSignature(publicKeyCredential, publicKey) {
 
-    var key_promise = importJWK(publicKey, alg);
-    
-    key_promise
-        .then(value => console.log("importKey: return " + encodeJson(value)))
-        .catch(e => console.error("importKey: " + JSON.stringify(e)));
-    
-    var hash_promise = sha256(publicKeyCredential.response.clientDataJSON);
-    
-    hash_promise
-        .then(value => console.log("sha256: return " + replacer(null, value)))
-        .catch(e => console.error("sha256: " + e));
-    
-    var signed_promise = hash_promise.then(value => {
-        var signed = new Uint8Array(publicKeyCredential.response.authenticatorData.byteLength + value.byteLength);
-        signed.set(new Uint8Array(publicKeyCredential.response.authenticatorData), 0);
-        signed.set(new Uint8Array(value), publicKeyCredential.response.authenticatorData.byteLength);
-        return signed;
-    });
-    
-    signed_promise
-        .then(value => console.log("signed: return " + replacer(null, value)))
-        .catch(e => console.error("signed: " + e));
-        
-    var signature_promise = decodeSignature(publicKey, publicKeyCredential.response.signature);
+    const alg = publicKey.alg ?? "S256";
 
-    signature_promise
-        .then(value => console.log("signature: return " + replacer(null, value)))
-        .catch(e => console.error("signature: " + e));
-    
-    var verify_promise = Promise.all([key_promise,signed_promise,signature_promise])
-        .then(all => crypto.subtle.verify(getAlgorithm(publicKey, alg), all[0], all[2], all[1]));
+    const key = await importJWK(publicKey, alg);
 
-    verify_promise
-        .then(value => console.log("verify: return " + value))
-        .catch(e => console.error("verify: " + e));
+    const hash = await sha256(publicKeyCredential.response.clientDataJSON);
 
-    return verify_promise;
-}
+    const signed = new Uint8Array(publicKeyCredential.response.authenticatorData.byteLength + hash.byteLength);
+    signed.set(new Uint8Array(publicKeyCredential.response.authenticatorData), 0);
+    signed.set(new Uint8Array(hash), publicKeyCredential.response.authenticatorData.byteLength);
 
-function importJWK(jwk, alg) {
-    var key;
-    switch(jwk.kty) {
-        case "EC":
-            key = {
-                "kty": jwk.kty,
-                "crv": jwk.crv,
-                "x": jwk.x,
-                "y": jwk.y
-            };
-            break;
-        case "RSA":
-            key = {
-                "kty": jwk.kty,
-                "n": jwk.n,
-                "e": jwk.e
-            };
-            break;
-        default:
-            return Promise.reject("Invalid argument: kty=" + jwk.kty);
-    }
-    var algorithm = getAlgorithm(jwk, alg);
-    return crypto.subtle.importKey("jwk", key, algorithm, false, ["verify"]);
-}
+    const signature = decodeSignature(publicKey, publicKeyCredential.response.signature);
 
-function getAlgorithm(jwk, alg) {
-    var algorithm;
-    switch(jwk.kty) {
-        case "EC":
-            algorithm = {
-                "name":"ECDSA",
-                "namedCurve": jwk.crv,
-            };
-            break;
-        case "RSA":
-            algorithm = {
-                "name": "RSASSA-PKCS1-v1_5",
-            };
-            break;
-        default:
-            return Promise.reject("Invalid argument: kty=" + jwk.kty);
-    }
-    var a = alg || jwk.alg || "S256";
-    switch(a) {
-        case "RS512":
-        case "ES512":
-        case "S512":
-            algorithm.hash = {
-                name: "SHA-512"
-            };
-            break;
-        case "RS384":
-        case "ES384":
-        case "S384":
-            algorithm.hash = {
-                name: "SHA-384"
-            };
-            break;
-        case "RS256":
-        case "ES256":
-        case "S256":
-            algorithm.hash = {
-                name: "SHA-256"
-            };
-            break;
-        default:
-            return Promise.reject("Invalid argument: alg=" + a);
-    }
-    return algorithm;
-}
+    const verify = await crypto.subtle.verify(getAlgorithm(publicKey, alg), key, signature, signed);
 
-function sha256(data) {
-    return crypto.subtle.digest("SHA-256", data);
+    return verify;
 }
 ```
