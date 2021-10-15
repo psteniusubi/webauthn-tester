@@ -8,10 +8,10 @@
     <link rel="stylesheet" type="text/css" href="../../js-tester/assets/common/styles/js-tester.css" />
     <script type="module">
         import { describeClass, console, assert } from "../../js-tester/assets/common/modules/js-tester.js";
-        import { decodeArray, encodeArray } from "../dev/assets/local/modules/base64.js";
-        import * as WebAuthn from "../dev/assets/local/modules/WebAuthnTypes.js";
-        import * as Decoder from "../dev/assets/local/modules/WebAuthnDecoder.js";
-        import { getRandomBytes } from "../dev/assets/local/modules/Crypto.js";
+        import { decodeArray, encodeArray } from "../assets/local/modules/base64.js";
+        import * as WebAuthn from "../assets/local/modules/WebAuthnTypes.js";
+        import * as Decoder from "../assets/local/modules/WebAuthnDecoder.js";
+        import { getRandomBytes } from "../assets/local/modules/Crypto.js";
         function replacer(k, v) {
             if (v instanceof ArrayBuffer) {
                 return replacer(k, new Uint8Array(v));
