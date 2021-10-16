@@ -1,4 +1,4 @@
-import { CborSimpleDecoder, BinaryReader } from "../../../../../frontend/cbor/assets/local/modules/CborSimpleDecoder.js";
+import { CborSimpleDecoder, BinaryReader } from "./CborSimpleDecoder.js";
 import * as WebAuthn from "./WebAuthnTypes.js";
 import { coseToJwk } from "./Crypto.js";
 
