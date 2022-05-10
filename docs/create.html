@@ -118,7 +118,7 @@
                     clear_error("AuthenticatorAttestationResponse");
                     toggle_section("AuthenticatorAttestationResponse", true);
                     const settings = Settings.readSettings();
-                    Settings.addCredential(settings, options.publicKey.user, attestation_response.id, authData.attestedCredentialData.credentialPublicKey);
+                    Settings.addCredential(settings, options.publicKey.user, attestation_response.id, authData.attestedCredentialData.credentialPublicKey, attestation_response.response);
                 } catch (error) {
                     toggle_section("AuthenticatorAttestationResponse", true);
                     out["PublicKeyCredential"].value = error.toString();

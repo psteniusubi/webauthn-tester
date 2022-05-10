@@ -34,7 +34,7 @@ export function createCredentialsList(select, settings, id) {
 	return select;
 }
 
-export function addCredential(settings, user, id, credentialPublicKey) {
+export function addCredential(settings, user, id, credentialPublicKey, response) {
 	if (notEmpty(id)) {
 		settings.credentials[id] = {
 			"instant": new Date().toISOString(),
@@ -45,6 +45,7 @@ export function addCredential(settings, user, id, credentialPublicKey) {
 			},
 			"id": id,
 			"credentialPublicKey": credentialPublicKey,
+			"response": response,
 		};
 		saveSettings(settings);
 	}
