@@ -269,6 +269,8 @@ export class AuthenticatorData {
     flags // int
     get up() { return (this.flags & 0x01) != 0; }
     get uv() { return (this.flags & 0x04) != 0; }
+    get be() { return (this.flags & 0x08) != 0; }
+    get bs() { return (this.flags & 0x10) != 0; }
     get at() { return (this.flags & 0x40) != 0; }
     get ed() { return (this.flags & 0x80) != 0; }
     signCount // int
@@ -288,6 +290,8 @@ export class AuthenticatorData {
                 value: this.flags ?? undefined,
                 up: this.up,
                 uv: this.uv,
+                be: this.be,
+                bs: this.bs,
                 at: this.at,
                 ed: this.ed,
             },
