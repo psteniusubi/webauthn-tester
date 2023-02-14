@@ -2,10 +2,10 @@
 <html lang="en">
 
 <head>
-    <meta charset="utf-8">
+    <!-- <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>report.html</title>
-    <link rel="stylesheet" type="text/css" href="../../js-tester/assets/common/styles/js-tester.css" />
+    <link rel="stylesheet" type="text/css" href="../../js-tester/assets/common/styles/js-tester.css" /> -->
     <script type="text/javascript">
         let console, assert;
         class WebAuthn {
@@ -14,17 +14,17 @@
             }
         }
         async function initialize() {
-            const module = await import("../../js-tester/assets/common/modules/js-tester.js");
+            const module = await import("../../frontend/js-tester-new/assets/common/modules/TestUI.js");
             console = module.console;
             assert = module.assert;
             module.describeClass(WebAuthn);
+            module.generateUI();
         }
         initialize();
     </script>
 </head>
 
 <body>
-    <section id="report"></section>
 </body>
 
 </html>

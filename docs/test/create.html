@@ -2,12 +2,8 @@
 <html lang="en">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>create.html</title>
-    <link rel="stylesheet" type="text/css" href="../../js-tester/assets/common/styles/js-tester.css" />
     <script type="module">
-        import { describeClass, console, assert } from "../../js-tester/assets/common/modules/js-tester.js";
+        import { generateUI, assert, console, describeClass } from "../../frontend/js-tester-new/assets/common/modules/TestUI.js";
         import { decodeArray, encodeArray } from "../assets/local/modules/base64.js";
         import * as WebAuthn from "../assets/local/modules/WebAuthnTypes.js";
         import * as Decoder from "../assets/local/modules/WebAuthnDecoder.js";
@@ -106,11 +102,11 @@
             }
         }
         describeClass(CredentialCreationTests);
+        generateUI();
     </script>
 </head>
 
 <body>
-    <section id="report"></section>
 </body>
 
 </html>
