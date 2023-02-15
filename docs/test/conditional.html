@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style type="text/css">
+        div#output {
+            font-family: monospace;
+            white-space: pre;
+        }
+    </style>
+    <script type="module">
+        import { getRandomBytes } from "../assets/local/modules/Crypto.js";
+        import { jsonToString } from "../assets/local/modules/utils.js";
+        import * as WebAuthn from "../assets/local/modules/WebAuthnTypes.js";
+        async function discover_thread() {
+            while (true) {
+                const credential = await navigator.credentials.get({
+                    mediation: "conditional",
+                    publicKey: {
+                        challenge: getRandomBytes(20)
+                    }
+                });
+                if (credential === null || credential === undefined) break;
+                console.log(`credential = ${credential}`);                
+                document.getElementById("output").innerText = jsonToString(new WebAuthn.PublicKeyCredential(credential));
+            }
+        }
+        async function initialize() {
+            if (!("isConditionalMediationAvailable" in PublicKeyCredential)) {
+                console.warn("isConditionalMediationAvailable");
+                return;
+            }
+            if (!await PublicKeyCredential.isConditionalMediationAvailable()) {
+                console.warn("isConditionalMediationAvailable");
+                return;
+            }
+            discover_thread(); // let this run in background, no await
+        }
+        initialize();
+    </script>
+</head>
+
+<body>
+    <main>
+        <div>
+            <label for="name">Username:</label>
+            <input type="text" name="name" autocomplete="username webauthn">
+        </div>
+        <div>
+            <label for="password">Password:</label>
+            <input type="password" name="password" autocomplete="current-password webauthn">
+        </div>
+        <div id="output">
+        </div>
+    </main>
+</body>
+
+</html>
