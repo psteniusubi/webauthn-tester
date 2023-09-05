@@ -75,20 +75,23 @@
             }
             async testRequest1() {
                 const credentialPublicKey = {
-                    "kty": "RSA",
-                    "alg": "RS256",
-                    "n": "t_fiZZ9fmkoLGlymGG380_lx2wCKYHi0ojpUEV3hdhJG3uaw9cc7-aP6pIxQVAQM0QcGm8xWnnPL7uq-w2XZ9KvffOxSbMp1vYL0L7JxmSLdzryyjjXDogPGyFHHTkiEwODN4kxJnoxP3aJZ1kfCsgTO0m5UhjBOvyQwJLIBNWo7gUi8Ty76qRfaH6nPnZ3ENY0zVJTfY2AKpoKY5297v5KDAP19bqXYRZ4qHSiCkA3UHL-SjHMhX3NVC7my9IimojadG-16M9-uBvNQrPzVe7471Bv9PX9NYddJ1-uU6zP7bOAhwN0heahzJrocSFjzFvVHhotDYhc97cHrigv7FQ",
-                    "e": "AQAB"
+                    "kty": "EC",
+                    "alg": "ES256",
+                    "crv": "P-256",
+                    "x": "_0kgXamLOwEYTnHMPgZIqg_39tUo6NjGSX7yeBwwwWE",
+                    "y": "KSRHrw231FW8ETVF0HNK7hOj-TJRRX59h0qE6BDbOSA"
                 };
                 const request = new WebAuthn.CredentialRequestOptions();
                 request.publicKey.challenge = getRandomBytes(20);
                 request.publicKey.allowCredentials = [
-                    WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray("gs67mmLsNRvYz7w1p0Wr1UMYZcM8VvW4SYHN5Y6FE3c"))
+                    WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray("rMyXAsIkicK9Xmz9gM_btf5i4TwP5cTGStTXhRiw7yw"))
                 ];
                 let json = request.toJson();
                 console.log(JSON.stringify(json, replacer, 2));
 
-                const assertion_response = new WebAuthn.PublicKeyCredential(await navigator.credentials.get(json));
+                const response = await navigator.credentials.get(json);
+                window.console.dir(response);
+                const assertion_response = new WebAuthn.PublicKeyCredential(response);
                 console.log(JSON.stringify(assertion_response.toJson(), replacer, 2));
 
                 const assertion_clientDataJSON = Decoder.decodeClientDataJSON(assertion_response.response.clientDataJSON);
@@ -99,6 +102,84 @@
 
                 const valid = await Decoder.verifyAssertionSignature(assertion_response, credentialPublicKey);
                 assert.assertTrue(valid);
+            }
+            async testRequest2() {
+                const request = new WebAuthn.CredentialRequestOptions();
+                request.publicKey.challenge = getRandomBytes(20);
+                request.publicKey.allowCredentials = [
+                    WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray("rMyXAsIkicK9Xmz9gM_btf5i4TwP5cTGStTXhRiw7yw"))
+                ];
+                // let json = request.toJson();
+                console.log(JSON.stringify(request, replacer, 2));
+
+                const response = await navigator.credentials.get(request);
+                assert.assertInstanceOf(response, PublicKeyCredential);
+                let names = Object.getOwnPropertyNames(response);
+                assert.assertArray(names);
+                assert.assertAreEqual(0, names.length);
+
+                let prototype = Object.getPrototypeOf(response);
+                assert.assertTrue(PublicKeyCredential.prototype === prototype);
+                assert.assertFalse(Credential.prototype === prototype);
+                names = Object.getOwnPropertyNames(prototype);
+                assert.assertArray(names);
+                assert.assertAreEqual(5, names.length);
+
+                prototype = Object.getPrototypeOf(prototype);
+                assert.assertTrue(Credential.prototype === prototype);
+                names = Object.getOwnPropertyNames(prototype);
+                assert.assertArray(names);
+                assert.assertAreEqual(3, names.length);
+
+                prototype = Object.getPrototypeOf(prototype);
+                assert.assertTrue(Object.prototype === prototype);
+
+                names = Array.from(getPropertyNames(response));
+                assert.assertArray(names);
+                assert.assertAreEqual(5, names.length);
+                assert.assertAreEqual("id,type,rawId,response,authenticatorAttachment", names.join(","));
+
+                names = Array.from(getPropertyNames({ a: "a", b: "b" }));
+                assert.assertArray(names);
+                assert.assertAreEqual(2, names.length);
+                assert.assertAreEqual("a,b", names.join(","));
+
+                // window.console.dir(response);
+                // const assertion_response = new WebAuthn.PublicKeyCredential(response);
+                // console.log(JSON.stringify(assertion_response.toJson(), replacer, 2));
+
+                // const assertion_clientDataJSON = Decoder.decodeClientDataJSON(assertion_response.response.clientDataJSON);
+                // console.log(JSON.stringify(assertion_clientDataJSON, replacer, 2));
+
+                // const authDataGet = Decoder.decodeAuthenticatorData(assertion_response.response.authenticatorData);
+                // console.log(JSON.stringify(authDataGet.toJson(), replacer, 2));
+
+                // const valid = await Decoder.verifyAssertionSignature(assertion_response, credentialPublicKey);
+                // assert.assertTrue(valid);
+            }
+        }
+        function* getPropertyNames(obj) {
+            for (const [key, value] of getPropertyDescriptors(obj)) {
+                if (Object.hasOwn(value, "get")) {
+                    // console.log(`${key}: get: ${typeof value.get}`);
+                    yield key;
+                } else if (Object.hasOwn(value, "value")) {
+                    // console.log(`${key}:value: ${typeof value.value}`);
+                    if ("function" !== typeof value["value"]) yield key;
+                }
+            }
+        }
+        function* getPropertyDescriptors(obj) {
+            if (obj === null || obj === undefined) {
+                return;
+            }
+            const prototype = Object.getPrototypeOf(obj);
+            if (null !== prototype && Object.prototype !== prototype) {
+                yield* getPropertyDescriptors(prototype);
+            }
+            const descriptors = Object.getOwnPropertyDescriptors(obj);
+            for (const i of Object.entries(descriptors)) {
+                yield i;
             }
         }
         describeClass(CredentialCreationTests);

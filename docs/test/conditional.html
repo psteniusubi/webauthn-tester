@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html>
 
+<!--
+
+https://w3c.github.io/webauthn/#dom-publickeycredential-isconditionalmediationavailable    
+https://github.com/w3c/webauthn/wiki/Explainer:-WebAuthn-Conditional-UI
+
+-->
+
 <head>
     <style type="text/css">
         div#output {
@@ -11,27 +18,34 @@
     <script type="module">
         import { getRandomBytes } from "../assets/local/modules/Crypto.js";
         import { jsonToString } from "../assets/local/modules/utils.js";
+        import { decodeArray, encodeArray } from "../assets/local/modules/base64.js";
         import * as WebAuthn from "../assets/local/modules/WebAuthnTypes.js";
         async function discover_thread() {
             while (true) {
                 const credential = await navigator.credentials.get({
                     mediation: "conditional",
                     publicKey: {
-                        challenge: getRandomBytes(20)
+                        challenge: getRandomBytes(20),
+                        allowCredentials: [
+                            {
+                                type: "public-key",
+                                id: decodeArray("PT6tRuwZpgAyEtXQrDJb6O7WL9knoK1A90lJbUkTcqI")
+                            }
+                        ]
                     }
                 });
                 if (credential === null || credential === undefined) break;
-                console.log(`credential = ${credential}`);                
+                console.log(`credential = ${credential}`);
                 document.getElementById("output").innerText = jsonToString(new WebAuthn.PublicKeyCredential(credential));
             }
         }
         async function initialize() {
             if (!("isConditionalMediationAvailable" in PublicKeyCredential)) {
-                console.warn("isConditionalMediationAvailable");
+                console.warn("isConditionalMediationAvailable in PublicKeyCredential");
                 return;
             }
             if (!await PublicKeyCredential.isConditionalMediationAvailable()) {
-                console.warn("isConditionalMediationAvailable");
+                console.warn("PublicKeyCredential.isConditionalMediationAvailable()");
                 return;
             }
             discover_thread(); // let this run in background, no await

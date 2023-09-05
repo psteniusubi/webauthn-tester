@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+
+<!--
+    https://github.com/w3c/webauthn/wiki/Explainer:-PRF-extension
+    https://w3c.github.io/webauthn/#prf-extension
+-->
+
+<head>
+    <script type="module">
+        import { generateUI, assert, console, describeClass } from "../../frontend/js-tester-new/assets/common/modules/TestUI.js";
+        import { getRandomBytes } from "../assets/local/modules/Crypto.js";
+        import { decodeArray, encodeArray } from "../assets/local/modules/base64.js";
+        import { jsonToString } from "../assets/local/modules/utils.js";
+        import * as WebAuthn from "../assets/local/modules/WebAuthnTypes.js";
+        class PrfTest {
+            async testCreate1() {
+                const request = new WebAuthn.CredentialCreationOptions();
+                request.publicKey.challenge = getRandomBytes(20);
+                request.publicKey.rp.name = location.origin;
+                request.publicKey.user.name = "hello@example.com";
+                request.publicKey.user.displayName = "hello@example.com";
+                request.publicKey.pubKeyCredParams = [
+                    WebAuthn.PublicKeyCredentialParameters.publicKey(-7),
+                    WebAuthn.PublicKeyCredentialParameters.publicKey(-257),
+                ];
+                //request.publicKey.authenticatorSelection.authenticatorAttachment = "cross-platform";
+                request.publicKey.authenticatorSelection.residentKey = "required";
+                request.publicKey.extensions = { "prf": {} }
+                const o = request.toJson();
+                console.log(jsonToString(o));
+                const c = await navigator.credentials.create(o);
+                const response = new WebAuthn.PublicKeyCredential(c);
+                console.log(jsonToString(response.toJson()));
+                const ext = c.getClientExtensionResults();
+                console.log(jsonToString(ext));
+                assert.assertIn("prf", ext);
+                assert.assertNotNull(ext.prf);
+            }
+            async testGet1() {
+                const request = new WebAuthn.CredentialRequestOptions();
+                request.publicKey.challenge = getRandomBytes(20);
+                request.publicKey.allowCredentials = [
+                    WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray("PT6tRuwZpgAyEtXQrDJb6O7WL9knoK1A90lJbUkTcqI"))
+                ];
+                request.publicKey.extensions = {
+                    "prf": {
+                        "eval": {
+                            "first": new TextEncoder().encode("first"),
+                            "second": new TextEncoder().encode("second")
+                        }
+                    }
+                };
+                const o = request.toJson();
+                console.log(jsonToString(o));
+                const c = await navigator.credentials.get(o);
+                const response = new WebAuthn.PublicKeyCredential(c);
+                console.log(jsonToString(response.toJson()));
+                const ext = c.getClientExtensionResults();
+                console.log(jsonToString(ext));
+                assert.assertIn("prf", ext);
+                assert.assertNotNull(ext.prf);
+            }
+        }
+        describeClass(PrfTest);
+        generateUI();
+    </script>
+</head>
+
+<body>
+
+</body>
+
+</html>
