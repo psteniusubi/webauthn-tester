@@ -80,7 +80,7 @@
             Settings.createCredentialsList(form.elements["excludeCredentials"], Settings.readSettings());
             form.addEventListener("input", async e => {
                 const options = await createPublicKeyCredentialCreationOptions();
-                const json = jsonToString(options.toJson());
+                const json = jsonToString(options.toJSON());
                 form["CredentialCreationOptions"].value = json;
             });
             form.addEventListener("reset", async e => {
@@ -98,20 +98,20 @@
             form.addEventListener("submit", async e => {
                 e.preventDefault();
                 const options = await createPublicKeyCredentialCreationOptions();
-                const o = options.toJson();
+                const o = options.toJSON();
                 form["CredentialCreationOptions"].value = jsonToString(o);
                 const response = document.getElementById("AuthenticatorAttestationResponse");
                 const out = response.querySelector("form");
                 out.reset();
                 try {
                     const attestation_response = new WebAuthn.PublicKeyCredential(await navigator.credentials.create(o));
-                    out["PublicKeyCredential"].value = jsonToString(attestation_response.toJson());
+                    out["PublicKeyCredential"].value = jsonToString(attestation_response.toJSON());
                     const clientDataJSON = Decoder.decodeClientDataJSON(attestation_response.response.clientDataJSON);
                     out["clientDataJSON"].value = jsonToString(clientDataJSON);
                     const attestationObject = Decoder.decodeAttestationObject(attestation_response.response.attestationObject);
                     out["attestationObject"].value = jsonToString(attestationObject);
                     const authData = Decoder.decodeAuthenticatorData(attestationObject.authData);
-                    out["authData"].value = jsonToString(authData.toJson());
+                    out["authData"].value = jsonToString(authData.toJSON());
                     out["credentialPublicKey"].value = jsonToString(authData.attestedCredentialData.credentialPublicKey);
                     clear_error("PublicKeyCredentialCreationOptions");
                     toggle_section("PublicKeyCredentialCreationOptions", false);

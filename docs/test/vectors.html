@@ -37,7 +37,7 @@
             console.log(JSON.stringify(attestationObject, replacer, 2));
 
             const authDataCreate = Decoder.decodeAuthenticatorData(attestationObject.authData);
-            console.log(JSON.stringify(authDataCreate.toJson(), replacer, 2));
+            console.log(JSON.stringify(authDataCreate.toJSON(), replacer, 2));
 
             const assertion_response = new WebAuthn.PublicKeyCredential();
             assertion_response.id = get.id;
@@ -54,7 +54,7 @@
             console.log(JSON.stringify(assertion_clientDataJSON, replacer, 2));
 
             const authDataGet = Decoder.decodeAuthenticatorData(assertion_response.response.authenticatorData);
-            console.log(JSON.stringify(authDataGet.toJson(), replacer, 2));
+            console.log(JSON.stringify(authDataGet.toJSON(), replacer, 2));
 
             const valid = await Decoder.verifyAssertionSignature(assertion_response, authDataCreate.attestedCredentialData.credentialPublicKey);
             assert.assertTrue(valid);
@@ -67,7 +67,7 @@
                 assert.assertIn("authenticatorAttachment", options.publicKey.authenticatorSelection);
                 assert.assertTrue(options.publicKey.authenticatorSelection.isEmpty());
 
-                const json = options.toJson();
+                const json = options.toJSON();
                 assert.assertIn("publicKey", json);
                 assert.assertIn("authenticatorSelection", json.publicKey);
                 assert.assertNotIn("authenticatorAttachment", json.publicKey.authenticatorSelection);
@@ -101,7 +101,7 @@
                 console.log(JSON.stringify(attestationObject, replacer, 2));
 
                 const authData = Decoder.decodeAuthenticatorData(attestationObject.authData);
-                console.log(JSON.stringify(authData.toJson(), replacer, 2));
+                console.log(JSON.stringify(authData.toJSON(), replacer, 2));
             }
             testDecodeAuthenticatorAttestationResponse2() {
                 const create = {
@@ -130,7 +130,7 @@
                 console.log(JSON.stringify(attestationObject, replacer, 2));
 
                 const authData = Decoder.decodeAuthenticatorData(attestationObject.authData);
-                console.log(JSON.stringify(authData.toJson(), replacer, 2));
+                console.log(JSON.stringify(authData.toJSON(), replacer, 2));
             }
             async testCreateAndGet1() {
                 const create = {

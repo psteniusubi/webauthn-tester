@@ -28,7 +28,7 @@
                 assert.assertIn("authenticatorAttachment", options.publicKey.authenticatorSelection);
                 assert.assertTrue(options.publicKey.authenticatorSelection.isEmpty());
 
-                const json = options.toJson();
+                const json = options.toJSON();
                 assert.assertIn("publicKey", json);
                 assert.assertIn("authenticatorSelection", json.publicKey);
                 assert.assertNotIn("authenticatorAttachment", json.publicKey.authenticatorSelection);
@@ -45,11 +45,11 @@
                     WebAuthn.PublicKeyCredentialParameters.publicKey(-7),
                     WebAuthn.PublicKeyCredentialParameters.publicKey(-257),
                 ];
-                let json = creation.toJson();
+                let json = creation.toJSON();
                 console.log(JSON.stringify(json, replacer, 2));
 
                 const attestation_response = new WebAuthn.PublicKeyCredential(await navigator.credentials.create(json));
-                json = attestation_response.toJson();
+                json = attestation_response.toJSON();
                 console.log(JSON.stringify(json, replacer, 2));
 
                 const clientDataJSON = Decoder.decodeClientDataJSON(attestation_response.response.clientDataJSON);
@@ -59,18 +59,18 @@
                 console.log(JSON.stringify(attestationObject, replacer, 2));
 
                 const authData = Decoder.decodeAuthenticatorData(attestationObject.authData);
-                console.log(JSON.stringify(authData.toJson(), replacer, 2));
+                console.log(JSON.stringify(authData.toJSON(), replacer, 2));
 
                 const request = new WebAuthn.CredentialRequestOptions();
                 request.publicKey.challenge = getRandomBytes(20);
                 request.publicKey.allowCredentials = [
                     WebAuthn.PublicKeyCredentialDescriptor.publicKey(attestation_response.rawId)
                 ];
-                json = request.toJson();
+                json = request.toJSON();
                 console.log(JSON.stringify(json, replacer, 2));
 
                 const assertion_response = new WebAuthn.PublicKeyCredential(await navigator.credentials.get(json));
-                json = assertion_response.toJson();
+                json = assertion_response.toJSON();
                 console.log(JSON.stringify(json, replacer, 2));
             }
             async testRequest1() {
@@ -86,19 +86,19 @@
                 request.publicKey.allowCredentials = [
                     WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray("rMyXAsIkicK9Xmz9gM_btf5i4TwP5cTGStTXhRiw7yw"))
                 ];
-                let json = request.toJson();
+                let json = request.toJSON();
                 console.log(JSON.stringify(json, replacer, 2));
 
                 const response = await navigator.credentials.get(json);
                 window.console.dir(response);
                 const assertion_response = new WebAuthn.PublicKeyCredential(response);
-                console.log(JSON.stringify(assertion_response.toJson(), replacer, 2));
+                console.log(JSON.stringify(assertion_response.toJSON(), replacer, 2));
 
                 const assertion_clientDataJSON = Decoder.decodeClientDataJSON(assertion_response.response.clientDataJSON);
                 console.log(JSON.stringify(assertion_clientDataJSON, replacer, 2));
 
                 const authDataGet = Decoder.decodeAuthenticatorData(assertion_response.response.authenticatorData);
-                console.log(JSON.stringify(authDataGet.toJson(), replacer, 2));
+                console.log(JSON.stringify(authDataGet.toJSON(), replacer, 2));
 
                 const valid = await Decoder.verifyAssertionSignature(assertion_response, credentialPublicKey);
                 assert.assertTrue(valid);
@@ -109,7 +109,7 @@
                 request.publicKey.allowCredentials = [
                     WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray("rMyXAsIkicK9Xmz9gM_btf5i4TwP5cTGStTXhRiw7yw"))
                 ];
-                // let json = request.toJson();
+                // let json = request.toJSON();
                 console.log(JSON.stringify(request, replacer, 2));
 
                 const response = await navigator.credentials.get(request);
@@ -146,13 +146,13 @@
 
                 // window.console.dir(response);
                 // const assertion_response = new WebAuthn.PublicKeyCredential(response);
-                // console.log(JSON.stringify(assertion_response.toJson(), replacer, 2));
+                // console.log(JSON.stringify(assertion_response.toJSON(), replacer, 2));
 
                 // const assertion_clientDataJSON = Decoder.decodeClientDataJSON(assertion_response.response.clientDataJSON);
                 // console.log(JSON.stringify(assertion_clientDataJSON, replacer, 2));
 
                 // const authDataGet = Decoder.decodeAuthenticatorData(assertion_response.response.authenticatorData);
-                // console.log(JSON.stringify(authDataGet.toJson(), replacer, 2));
+                // console.log(JSON.stringify(authDataGet.toJSON(), replacer, 2));
 
                 // const valid = await Decoder.verifyAssertionSignature(assertion_response, credentialPublicKey);
                 // assert.assertTrue(valid);

@@ -83,7 +83,7 @@
             }
             form.addEventListener("input", async e => {
                 const options = await createPublicKeyCredentialRequestOptions();
-                const json = jsonToString(options.toJson());
+                const json = jsonToString(options.toJSON());
                 form["CredentialRequestOptions"].value = json;
             });
             form.addEventListener("reset", async e => {
@@ -101,20 +101,20 @@
             form.addEventListener("submit", async e => {
                 e.preventDefault();
                 const options = await createPublicKeyCredentialRequestOptions();
-                const o = options.toJson();
+                const o = options.toJSON();
                 form["CredentialRequestOptions"].value = jsonToString(o);
                 const response = document.getElementById("AuthenticatorAssertionResponse");
                 const out = response.querySelector("form");
                 out.reset();
                 try {
                     const assertion_response = new WebAuthn.PublicKeyCredential(await navigator.credentials.get(o));
-                    out["PublicKeyCredential"].value = jsonToString(assertion_response.toJson());
+                    out["PublicKeyCredential"].value = jsonToString(assertion_response.toJSON());
                     // clientDataJSON
                     const clientDataJSON = Decoder.decodeClientDataJSON(assertion_response.response.clientDataJSON);
                     out["clientDataJSON"].value = jsonToString(clientDataJSON);
                     // authenticatorData
                     const authData = Decoder.decodeAuthenticatorData(assertion_response.response.authenticatorData);
-                    out["authenticatorData"].value = jsonToString(authData.toJson());
+                    out["authenticatorData"].value = jsonToString(authData.toJSON());
                     // credentialPublicKey 
                     const credential = Settings.getCredential(Settings.readSettings(), assertion_response.id);
                     if (notNull(credential) && notNull(credential.credentialPublicKey)) {

@@ -26,11 +26,11 @@
                 //request.publicKey.authenticatorSelection.authenticatorAttachment = "cross-platform";
                 request.publicKey.authenticatorSelection.residentKey = "required";
                 request.publicKey.extensions = { "prf": {} }
-                const o = request.toJson();
+                const o = request.toJSON();
                 console.log(jsonToString(o));
                 const c = await navigator.credentials.create(o);
                 const response = new WebAuthn.PublicKeyCredential(c);
-                console.log(jsonToString(response.toJson()));
+                console.log(jsonToString(response.toJSON()));
                 const ext = c.getClientExtensionResults();
                 console.log(jsonToString(ext));
                 assert.assertIn("prf", ext);
@@ -50,11 +50,11 @@
                         }
                     }
                 };
-                const o = request.toJson();
+                const o = request.toJSON();
                 console.log(jsonToString(o));
                 const c = await navigator.credentials.get(o);
                 const response = new WebAuthn.PublicKeyCredential(c);
-                console.log(jsonToString(response.toJson()));
+                console.log(jsonToString(response.toJSON()));
                 const ext = c.getClientExtensionResults();
                 console.log(jsonToString(ext));
                 assert.assertIn("prf", ext);

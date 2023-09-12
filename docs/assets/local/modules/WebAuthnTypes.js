@@ -12,7 +12,7 @@ export class PublicKeyCredentialRpEntity extends PublicKeyCredentialEntity {
         this.id = obj?.id;
     }
     isEmpty() { return (this.name ?? this.id ?? undefined) === undefined }
-    toJson() {
+    toJSON() {
         return this.isEmpty()
             ? undefined
             : {
@@ -30,7 +30,7 @@ export class PublicKeyCredentialUserEntity extends PublicKeyCredentialEntity {
         this.displayName = obj?.displayName;
     }
     isEmpty() { return (this.name ?? this.displayName ?? undefined) === undefined }
-    toJson() {
+    toJSON() {
         return this.isEmpty()
             ? undefined
             : {
@@ -48,7 +48,7 @@ export class PublicKeyCredentialParameters {
         this.type = obj?.type;
         this.alg = obj?.alg;
     }
-    toJson() {
+    toJSON() {
         return {
             type: this.type ?? undefined,
             alg: this.alg ?? undefined,
@@ -71,7 +71,7 @@ export class PublicKeyCredentialDescriptor {
         this.id = obj?.id;
         this.transports = obj?.transports;
     }
-    toJson() {
+    toJSON() {
         return {
             type: this.type ?? undefined,
             id: this.id ?? undefined,
@@ -97,7 +97,7 @@ export class AuthenticatorSelectionCriteria {
         this.userVerification = obj?.userVerification;
     }
     isEmpty() { return (this.authenticatorAttachment ?? this.residentKey ?? this.userVerification ?? undefined) === undefined; }
-    toJson() {
+    toJSON() {
         return this.isEmpty()
             ? undefined
             : {
@@ -129,15 +129,15 @@ export class PublicKeyCredentialCreationOptions {
         this.attestation = obj?.attestation;
         this.extensions = obj?.extensions;
     }
-    toJson() {
+    toJSON() {
         return {
-            rp: this.rp?.toJson(),
-            user: this.user?.toJson(),
+            rp: this.rp?.toJSON(),
+            user: this.user?.toJSON(),
             challenge: this.challenge ?? undefined,
-            pubKeyCredParams: this.pubKeyCredParams?.map(t => t?.toJson()),
+            pubKeyCredParams: this.pubKeyCredParams?.map(t => t?.toJSON()),
             timeout: this.timeout ?? undefined,
-            excludeCredentials: this.excludeCredentials?.map(t => t?.toJson()),
-            authenticatorSelection: this.authenticatorSelection?.toJson(),
+            excludeCredentials: this.excludeCredentials?.map(t => t?.toJSON()),
+            authenticatorSelection: this.authenticatorSelection?.toJSON(),
             attestation: this.attestation ?? undefined,
             extensions: this.extensions ?? undefined,
         }
@@ -149,9 +149,9 @@ export class CredentialCreationOptions {
     constructor(obj) {
         this.publicKey = new PublicKeyCredentialCreationOptions(obj?.publicKey);
     }
-    toJson() {
+    toJSON() {
         return {
-            publicKey: this.publicKey?.toJson()
+            publicKey: this.publicKey?.toJSON()
         }
     }
 }
@@ -171,12 +171,12 @@ export class PublicKeyCredentialRequestOptions {
         this.userVerification = obj?.userVerification;
         this.extensions = obj?.extensions;
     }
-    toJson() {
+    toJSON() {
         return {
             challenge: this.challenge ?? undefined,
             timeout: this.timeout ?? undefined,
             rpId: this.rpId ?? undefined,
-            allowCredentials: this.allowCredentials?.map(t => t?.toJson()),
+            allowCredentials: this.allowCredentials?.map(t => t?.toJSON()),
             userVerification: this.userVerification ?? undefined,
             extensions: this.extensions ?? undefined,
         }
@@ -188,9 +188,9 @@ export class CredentialRequestOptions {
     constructor(obj) {
         this.publicKey = new PublicKeyCredentialRequestOptions(obj?.publicKey);
     }
-    toJson() {
+    toJSON() {
         return {
-            publicKey: this.publicKey?.toJson()
+            publicKey: this.publicKey?.toJSON()
         }
     }
 }
@@ -213,12 +213,12 @@ export class PublicKeyCredential extends Credential {
         if ("attestationObject" in (obj?.response ?? {})) this.response = new AuthenticatorAttestationResponse(obj?.response);
         if ("authenticatorData" in (obj?.response ?? {})) this.response = new AuthenticatorAssertionResponse(obj?.response);
     }
-    toJson() {
+    toJSON() {
         return {
             id: this.id ?? undefined,
             type: this.type ?? undefined,
             rawId: this.rawId ?? undefined,
-            response: this.response?.toJson(),
+            response: this.response?.toJSON(),
         }
     }
 }
@@ -236,7 +236,7 @@ export class AuthenticatorAttestationResponse extends AuthenticatorResponse {
         super(obj);
         this.attestationObject = obj?.attestationObject;
     }
-    toJson() {
+    toJSON() {
         return {
             clientDataJSON: this.clientDataJSON ?? undefined,
             attestationObject: this.attestationObject ?? undefined
@@ -254,7 +254,7 @@ export class AuthenticatorAssertionResponse extends AuthenticatorResponse {
         this.signature = obj?.signature;
         this.userHandle = obj?.userHandle;
     }
-    toJson() {
+    toJSON() {
         return {
             clientDataJSON: this.clientDataJSON ?? undefined,
             authenticatorData: this.authenticatorData ?? undefined,
@@ -283,7 +283,7 @@ export class AuthenticatorData {
         this.attestedCredentialData = new AttestedCredentialData(obj?.attestedCredentialData);
         this.extensions = obj?.extensions;
     }
-    toJson() {
+    toJSON() {
         return {
             rpIdHash: this.rpIdHash ?? undefined,
             flags: {
@@ -296,7 +296,7 @@ export class AuthenticatorData {
                 ed: this.ed,
             },
             signCount: this.signCount ?? undefined,
-            attestedCredentialData: this.at ? this.attestedCredentialData?.toJson() : undefined,
+            attestedCredentialData: this.at ? this.attestedCredentialData?.toJSON() : undefined,
             extensions: this.ed ? this.extensions ?? undefined : undefined,
         }
     }
@@ -311,7 +311,7 @@ export class AttestedCredentialData {
         this.credentialId = obj?.credentialId;
         this.credentialPublicKey = obj?.credentialPublicKey;
     }
-    toJson() {
+    toJSON() {
         return {
             aaguid: this.aaguid,
             credentialId: this.credentialId,
