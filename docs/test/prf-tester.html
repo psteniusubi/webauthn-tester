@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>PRF tester</title>
+    <style type="text/css">
+        :root {
+            font-family: sans-serif;
+        }
+    </style>
+    <script type="module">
+        import { getRandomBytes } from "../assets/local/modules/Crypto.js";
+        import { jsonToString } from "../assets/local/modules/utils.js";
+        import { decodeArray } from "../assets/local/modules/base64.js";
+        import * as WebAuthn from "../assets/local/modules/WebAuthnTypes.js";
+        const KEY = "webauthn-tester/prf-tester";
+        function get_settings() {
+            try {
+                return JSON.parse(localStorage.getItem(KEY));
+            } catch {
+                return {};
+            }
+        }
+        function save_credential(credential, extensions) {
+            const json = credential.toJSON();
+            const entry = {
+                "instant": new Date().toISOString(),
+                "id": json.id,
+                "credential": json,
+                "extensions": extensions
+            }
+            const settings = get_settings();
+            settings[json.id] = entry;
+            localStorage.setItem(KEY, jsonToString(settings));
+        }
+        function remove_credential(id) {
+            const settings = get_settings();
+            if (id in settings) {
+                delete settings[id];
+            }
+            localStorage.setItem(KEY, jsonToString(settings));
+        }
+        function get_credential_ids() {
+            const settings = get_settings();
+            const entries = Object.entries(settings)
+                .filter(([key, value]) => "instant" in value)
+                .filter(([key, value]) => "id" in value)
+                .filter(([key, value]) => "credential" in value)
+                .filter(([key, value]) => "extensions" in value)
+                .map(([key, value]) => value.id);
+            return Array.from(entries);
+        }
+        async function build_create_form() {
+            const form = document.querySelector("#create form");
+            form.addEventListener("submit", async e => {
+                e.preventDefault();
+                const request = new WebAuthn.CredentialCreationOptions();
+                request.publicKey.challenge = getRandomBytes(20);
+                request.publicKey.rp.name = location.origin;
+                request.publicKey.user.name = "hello@example.com";
+                request.publicKey.user.displayName = "hello@example.com";
+                request.publicKey.pubKeyCredParams = [
+                    WebAuthn.PublicKeyCredentialParameters.publicKey(-7),
+                    WebAuthn.PublicKeyCredentialParameters.publicKey(-257),
+                ];
+                let authenticatorAttachment = form.elements["authenticatorAttachment"].value ?? "*";
+                if (authenticatorAttachment === "*") authenticatorAttachment = undefined;
+                request.publicKey.authenticatorSelection.authenticatorAttachment = authenticatorAttachment;
+                request.publicKey.authenticatorSelection.residentKey = form.elements["residentKey"].checked ? form.elements["residentKey"].value : undefined;
+                request.publicKey.authenticatorSelection.userVerification = form.elements["userVerification"].checked ? form.elements["userVerification"].value : undefined;
+                request.publicKey.extensions = { "prf": {} }
+                console.log(jsonToString(request));
+                let r;
+                try {
+                    r = await navigator.credentials.create(request.toJSON());
+                } catch (e) {
+                    console.error(`navigator.credentials.create: ${e}`);
+                    alert(`Cannot create credential\r\n${e}`);
+                    return;
+                }
+                const credential = new WebAuthn.PublicKeyCredential(r);
+                console.log(jsonToString(credential));
+                const extensions = r.getClientExtensionResults();
+                console.log(jsonToString(extensions));
+                const prfEnabled = ("prf" in extensions) && ("enabled" in extensions["prf"]) && (extensions["prf"].enabled === true);
+                if (prfEnabled) {
+                    alert("Credential with PRF extension created.");
+                    save_credential(credential, extensions);
+                    document.querySelector("#get form").dispatchEvent(new CustomEvent("reset", { detail: credential.toJSON().id }));
+                } else {
+                    alert("PRF extension is not available.\r\nChoose different options or a different token.");
+                }
+            });
+        }
+        async function build_get_form() {
+            const form = document.querySelector("#get form");
+            form.addEventListener("submit", async e => {
+                e.preventDefault();
+                const request = new WebAuthn.CredentialRequestOptions();
+                request.publicKey.challenge = getRandomBytes(20);
+                const allowCredentials = form.elements["allowCredentials"];
+                request.publicKey.allowCredentials = [];
+                for (let i = 0; i < allowCredentials.selectedOptions.length; i++) {
+                    const option = allowCredentials.selectedOptions[i];
+                    if (option.value !== "*") {
+                        let id = WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray(option.value));
+                        request.publicKey.allowCredentials.push(id);
+                    }
+                }
+                WebAuthn.PublicKeyCredentialDescriptor.publicKey(decodeArray("PT6tRuwZpgAyEtXQrDJb6O7WL9knoK1A90lJbUkTcqI"))
+                request.publicKey.extensions = {
+                    "prf": {
+                        "eval": {
+                            "first": new TextEncoder().encode(form.elements["first"].value),
+                            "second": new TextEncoder().encode(form.elements["second"].value),
+                        }
+                    }
+                };
+                console.log(jsonToString(request));
+                let r;
+                try {
+                    r = await navigator.credentials.get(request.toJSON());
+                } catch (e) {
+                    console.error(`navigator.credentials.get: ${e}`);
+                    alert(`Cannot get credential\r\n${e}`);
+                    return;
+                }
+                const credential = new WebAuthn.PublicKeyCredential(r);
+                console.log(jsonToString(credential));
+                const extensions = r.getClientExtensionResults();
+                console.log(jsonToString(extensions));
+                form.elements["results"].value = jsonToString(extensions);
+            });
+            form.elements["remove"].addEventListener("click", async e => {
+                e.preventDefault();
+                const allowCredentials = form.elements["allowCredentials"];
+                for (let i = 0; i < allowCredentials.selectedOptions.length; i++) {
+                    const option = allowCredentials.selectedOptions[i];
+                    remove_credential(option.value);
+                }
+                form.dispatchEvent(new Event("reset"));
+            });
+            form.addEventListener("reset", async e => {
+                const allowCredentials = form.elements["allowCredentials"];
+                allowCredentials.innerHTML = "";
+                let option = document.createElement("option");
+                option.defaultSelected = !("detail" in e);
+                option.value = "*";
+                option.innerText = "Any";
+                allowCredentials.appendChild(option);
+                for (let id of get_credential_ids()) {
+                    option = document.createElement("option");
+                    option.defaultSelected = ("detail" in e) && (e.detail === id);
+                    option.value = id;
+                    option.innerText = id;
+                    allowCredentials.appendChild(option);
+                }
+            });
+            form.dispatchEvent(new Event("reset"));
+        }
+        build_create_form();
+        build_get_form();
+    </script>
+</head>
+
+<body>
+
+    <section id="create">
+        <h1>Create credential</h1>
+        <form>
+            <div>
+                <label>
+                    Attachment
+                    <select name="authenticatorAttachment">
+                        <option value="*" selected>Any</option>
+                        <option value="platform">Platform</option>
+                        <option value="cross-platform">Cross Platform</option>
+                    </select>
+                </label>
+            </div>
+            <div>
+                <label>
+                    Resident
+                    <input type="checkbox" name="residentKey" value="required" checked />
+                </label>
+            </div>
+            <div>
+                <label>
+                    User verification
+                    <input type="checkbox" name="userVerification" value="required" checked />
+                </label>
+            </div>
+            <div>
+                <button type="submit" name="submit">Create</button>
+                <button type="reset" name="reset">Reset</button>
+            </div>
+        </form>
+    </section>
+
+    <section id="get">
+        <h1>Get credential</h1>
+        <form autocomplete="off">
+            <div>
+                <label>
+                    Credential
+                    <select name="allowCredentials"></select>
+                </label>
+            </div>
+            <div>
+                <label>
+                    First (PRF extension input)
+                    <input type="text" name="first" autocomplete="off" />
+                </label>
+            </div>
+            <div>
+                <label>
+                    Second (PRF extension input)
+                    <input type="text" name="second" autocomplete="off" />
+                </label>
+            </div>
+            <div>
+                <button type="submit" name="submit">Get</button>
+                <button type="button" name="remove">Remove</button>
+                <button type="reset" name="reset">Reset</button>
+            </div>
+            <div>
+                <label>
+                    PRF extension output
+                    <textarea rows="8" cols="70" name="results" readonly="true">
+                    </textarea>
+                </label>
+            </div>
+        </form>
+    </section>
+
+</body>
+
+</html>
