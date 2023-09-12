@@ -92,7 +92,7 @@ export class AuthenticatorSelectionCriteria {
     // requireResidentKey // bool
     userVerification // string
     constructor(obj) {
-        this.type = obj?.authenticatorAttachment;
+        this.authenticatorAttachment = obj?.authenticatorAttachment;
         this.residentKey = obj?.residentKey;
         this.userVerification = obj?.userVerification;
     }
