@@ -42,12 +42,13 @@
         }
         function get_credential_ids() {
             const settings = get_settings();
-            const entries = Object.entries(settings)
-                .filter(([key, value]) => "instant" in value)
-                .filter(([key, value]) => "id" in value)
-                .filter(([key, value]) => "credential" in value)
-                .filter(([key, value]) => "extensions" in value)
-                .map(([key, value]) => value.id);
+            const entries = Object.values(settings)
+                .filter(value => "instant" in value)
+                .filter(value => "id" in value)
+                .filter(value => "credential" in value)
+                .filter(value => "extensions" in value)
+                .toSorted((a, b) => b.instant.localeCompare(a.instant, "en"))
+                .map(value => value.id);
             return Array.from(entries);
         }
         async function build_create_form() {
