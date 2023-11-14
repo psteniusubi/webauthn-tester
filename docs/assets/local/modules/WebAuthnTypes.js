@@ -23,7 +23,7 @@ export class PublicKeyCredentialRpEntity extends PublicKeyCredentialEntity {
 }
 
 export class PublicKeyCredentialUserEntity extends PublicKeyCredentialEntity {
-    get id() { return new TextEncoder("utf-8").encode(this.name); } // BufferSource
+    id // BufferSource
     displayName // string
     constructor(obj) {
         super(obj);
@@ -145,12 +145,14 @@ export class PublicKeyCredentialCreationOptions {
 }
 
 export class CredentialCreationOptions {
+    signal // AbortSignal
     publicKey = new PublicKeyCredentialCreationOptions()
     constructor(obj) {
         this.publicKey = new PublicKeyCredentialCreationOptions(obj?.publicKey);
     }
     toJSON() {
         return {
+            signal: this.signal ?? undefined,
             publicKey: this.publicKey?.toJSON()
         }
     }
@@ -184,12 +186,16 @@ export class PublicKeyCredentialRequestOptions {
 }
 
 export class CredentialRequestOptions {
+    mediation // CredentialMediationRequirement
+    signal // AbortSignal
     publicKey = new PublicKeyCredentialRequestOptions()
     constructor(obj) {
         this.publicKey = new PublicKeyCredentialRequestOptions(obj?.publicKey);
     }
     toJSON() {
         return {
+            mediation: this.mediation ?? undefined,
+            signal: this.signal ?? undefined,
             publicKey: this.publicKey?.toJSON()
         }
     }

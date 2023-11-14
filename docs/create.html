@@ -42,7 +42,7 @@
         import * as WebAuthn from "./assets/local/modules/WebAuthnTypes.js";
         import * as Decoder from "./assets/local/modules/WebAuthnDecoder.js";
         import { atobUrlSafe, btoaUrlSafe, decodeArray } from "./assets/local/modules/base64.js";
-        import { getRandomBytes } from "./assets/local/modules/Crypto.js";
+        import { getRandomBytes, sha256 } from "./assets/local/modules/Crypto.js";
         import { jsonToString, toggle_section, clear_error } from "./assets/local/modules/utils.js";
         import { ifNotEmpty } from "./assets/local/modules/common.js";
         import * as Settings from "./assets/local/modules/settings.js";
@@ -137,8 +137,9 @@
             const publicKey = new WebAuthn.PublicKeyCredentialCreationOptions();
             publicKey.rp.name = ifNotEmpty(form["rp.name"].value);
             publicKey.rp.id = ifNotEmpty(form["rp.id"].value);
-            publicKey.user.name = ifNotEmpty(form["user.name"].value);
-            publicKey.user.displayName = ifNotEmpty(form["user.displayName"].value);
+            publicKey.user.name = ifNotEmpty(form["user.name"].value) ?? "";
+            publicKey.user.id = await sha256(new TextEncoder().encode(publicKey.user.name));
+            publicKey.user.displayName = ifNotEmpty(form["user.displayName"].value) ?? "";
             publicKey.challenge = getRandomBytes(20);
             publicKey.pubKeyCredParams = [
                 WebAuthn.PublicKeyCredentialParameters.publicKey(-7),
@@ -234,12 +235,12 @@
                         <label>
                             <span>user.name</span>
                             <input class="flex1" type="text" name="user.name" placeholder="user.name"
-                                value="hello@example.com" required>
+                                value="hello@example.com">
                         </label>
                         <label>
                             <span>user.displayName</span>
                             <input class="flex1" type="text" name="user.displayName" placeholder="user.displayName"
-                                value="Hello Example" required>
+                                value="">
                         </label>
                         <label>
                             <span>timeout</span>
