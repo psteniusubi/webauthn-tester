@@ -135,7 +135,7 @@
             const section = document.getElementById("PublicKeyCredentialCreationOptions");
             const form = section.querySelector("form");
             const publicKey = new WebAuthn.PublicKeyCredentialCreationOptions();
-            publicKey.rp.name = ifNotEmpty(form["rp.name"].value);
+            publicKey.rp.name = ifNotEmpty(form["rp.name"].value) ?? "";
             publicKey.rp.id = ifNotEmpty(form["rp.id"].value);
             publicKey.user.name = ifNotEmpty(form["user.name"].value) ?? "";
             publicKey.user.id = await sha256(new TextEncoder().encode(publicKey.user.name));
@@ -219,7 +219,7 @@
                     <form autocomplete="off" novalidate="">
                         <label>
                             <span>rp.name</span>
-                            <select class="flex1" name="rp.name" placeholder="rp.name" required>
+                            <select class="flex1" name="rp.name" placeholder="rp.name">
                                 <option></option>
                                 <option selected="selected" id="_origin"></option>
                                 <option>webauthn-tester</option>
