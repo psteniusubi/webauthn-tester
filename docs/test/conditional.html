@@ -20,26 +20,54 @@ https://github.com/w3c/webauthn/wiki/Explainer:-WebAuthn-Conditional-UI
         import { jsonToString } from "../assets/local/modules/utils.js";
         import { decodeArray, encodeArray } from "../assets/local/modules/base64.js";
         import * as WebAuthn from "../assets/local/modules/WebAuthnTypes.js";
+        /** @type AbortController | null */
+        let controller = null;
         async function discover_thread() {
             while (true) {
-                const credential = await navigator.credentials.get({
-                    mediation: "conditional",
-                    publicKey: {
-                        challenge: getRandomBytes(20),
-                        allowCredentials: [
-                            {
-                                type: "public-key",
-                                id: decodeArray("PT6tRuwZpgAyEtXQrDJb6O7WL9knoK1A90lJbUkTcqI")
-                            }
-                        ]
-                    }
-                });
-                if (credential === null || credential === undefined) break;
-                console.log(`credential = ${credential}`);
+                let credential = null;
+                try {
+                    controller = new AbortController();
+                    const options = {
+                        mediation: "conditional",
+                        signal: controller.signal,
+                        publicKey: {
+                            challenge: getRandomBytes(20),
+                            allowCredentials: [
+                                // {
+                                //     type: "public-key",
+                                //     id: decodeArray("PT6tRuwZpgAyEtXQrDJb6O7WL9knoK1A90lJbUkTcqI")
+                                // }
+                            ]
+                        }
+                    };
+                    credential = await navigator.credentials.get(options);
+                } catch (e) {
+                    console.error(`navigator.credentials.get(): ${e}`);
+                    credential = null;
+                } finally {
+                    controller = null;
+                }
+                console.log(`navigator.credentials.get(): credential = ${credential}`);
+                if (credential === null || credential === undefined) continue;
                 document.getElementById("output").innerText = jsonToString(new WebAuthn.PublicKeyCredential(credential));
             }
         }
         async function initialize() {
+            const form = document.getElementById("logon");
+            form.addEventListener("submit", async e => {
+                e.preventDefault();
+                console.log("form.submit");
+            });
+            form.elements["name"].addEventListener("change", async e => {
+                // e.preventDefault();
+                console.log("input.name.change");
+                controller?.abort("change");
+            });
+            form.elements["name"].addEventListener("input", async e => {
+                // e.preventDefault();
+                console.log("input.name.input");
+                controller?.abort("input");
+            });
             if (!("isConditionalMediationAvailable" in PublicKeyCredential)) {
                 console.warn("isConditionalMediationAvailable in PublicKeyCredential");
                 return;
@@ -56,16 +84,21 @@ https://github.com/w3c/webauthn/wiki/Explainer:-WebAuthn-Conditional-UI
 
 <body>
     <main>
-        <div>
-            <label for="name">Username:</label>
-            <input type="text" name="name" autocomplete="username webauthn">
-        </div>
-        <div>
-            <label for="password">Password:</label>
-            <input type="password" name="password" autocomplete="current-password webauthn">
-        </div>
-        <div id="output">
-        </div>
+        <form id="logon">
+            <div>
+                <label for="name">Username:</label>
+                <input type="text" name="name" autocomplete="email webauthn">
+            </div>
+            <div>
+                <label for="password">Password:</label>
+                <input type="password" name="password" autocomplete="current-password webauthn">
+            </div>
+            <div>
+                <button type="submit">Logon</button>
+            </div>
+            <div id="output">
+            </div>
+        </form>
     </main>
 </body>
 
