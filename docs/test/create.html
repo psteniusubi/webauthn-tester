@@ -7,7 +7,7 @@
         import { decodeArray, encodeArray } from "../assets/local/modules/base64.js";
         import * as WebAuthn from "../assets/local/modules/WebAuthnTypes.js";
         import * as Decoder from "../assets/local/modules/WebAuthnDecoder.js";
-        import { getRandomBytes } from "../assets/local/modules/Crypto.js";
+        import { getRandomBytes, sha256 } from "../assets/local/modules/Crypto.js";
         function replacer(k, v) {
             if (v instanceof ArrayBuffer) {
                 return replacer(k, new Uint8Array(v));
@@ -39,6 +39,7 @@
                 const creation = new WebAuthn.CredentialCreationOptions();
                 creation.publicKey.rp.name = location.origin;
                 creation.publicKey.user.name = "hello@example.com";
+                creation.publicKey.user.id = await sha256(new TextEncoder().encode(creation.publicKey.user.name));
                 creation.publicKey.user.displayName = "Hello Example";
                 creation.publicKey.challenge = getRandomBytes(20);
                 creation.publicKey.pubKeyCredParams = [

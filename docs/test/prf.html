@@ -8,7 +8,7 @@
 <head>
     <script type="module">
         import { generateUI, assert, console, describeClass } from "../../frontend/js-tester-new/assets/common/modules/TestUI.js";
-        import { getRandomBytes } from "../assets/local/modules/Crypto.js";
+        import { getRandomBytes, sha256 } from "../assets/local/modules/Crypto.js";
         import { decodeArray, encodeArray } from "../assets/local/modules/base64.js";
         import { jsonToString } from "../assets/local/modules/utils.js";
         import * as WebAuthn from "../assets/local/modules/WebAuthnTypes.js";
@@ -18,6 +18,7 @@
                 request.publicKey.challenge = getRandomBytes(20);
                 request.publicKey.rp.name = location.origin;
                 request.publicKey.user.name = "hello@example.com";
+                request.publicKey.user.id = await sha256(new TextEncoder().encode(request.publicKey.user.name));
                 request.publicKey.user.displayName = "hello@example.com";
                 request.publicKey.pubKeyCredParams = [
                     WebAuthn.PublicKeyCredentialParameters.publicKey(-7),

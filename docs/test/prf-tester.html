@@ -9,7 +9,7 @@
         }
     </style>
     <script type="module">
-        import { getRandomBytes } from "../assets/local/modules/Crypto.js";
+        import { getRandomBytes, sha256 } from "../assets/local/modules/Crypto.js";
         import { jsonToString } from "../assets/local/modules/utils.js";
         import { decodeArray } from "../assets/local/modules/base64.js";
         import * as WebAuthn from "../assets/local/modules/WebAuthnTypes.js";
@@ -59,6 +59,7 @@
                 request.publicKey.challenge = getRandomBytes(20);
                 request.publicKey.rp.name = location.origin;
                 request.publicKey.user.name = "hello@example.com";
+                request.publicKey.user.id = await sha256(new TextEncoder().encode(request.publicKey.user.name));
                 request.publicKey.user.displayName = "hello@example.com";
                 request.publicKey.pubKeyCredParams = [
                     WebAuthn.PublicKeyCredentialParameters.publicKey(-7),
